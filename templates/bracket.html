@@ -145,6 +145,63 @@
 {% endblock %}
 
 {% block content %}
+{% macro _bmatch(match, preds) %}
+  {% set pred = preds.get(match.id) %}
+  {% set tbd = match.team1 == 'TBD' %}
+  <div class="bmatch {{ 'finished' if match.is_finished }}">
+    <div class="bmatch-row">
+      {% if tbd %}
+        <span class="btbd">Por definir</span>
+        <span class="bscore" style="color:#e2e8f0;">–</span>
+      {% else %}
+        <span class="bteam {{ 'winner' if match.is_finished and match.score1_real is not none and match.score1_real > match.score2_real }}">
+          {{ match.team1 | truncate(14, true, '…') }}
+        </span>
+        <span class="bscore">
+          {% if match.is_finished %}{{ match.score1_real }}
+          {% elif not match.is_open %}<span style="color:#e2e8f0;">–</span>
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+    <div class="bmatch-row">
+      {% if tbd %}
+        <span class="btbd">Por definir</span>
+        <span class="bscore" style="color:#e2e8f0;">–</span>
+      {% else %}
+        <span class="bteam {{ 'winner' if match.is_finished and match.score2_real is not none and match.score2_real > match.score1_real }}">
+          {{ match.team2 | truncate(14, true, '…') }}
+        </span>
+        <span class="bscore">
+          {% if match.is_finished %}{{ match.score2_real }}
+          {% elif not match.is_open %}<span style="color:#e2e8f0;">–</span>
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+    <div class="bmatch-footer">
+      <span class="bmatch-date">{{ match.match_datetime.strftime('%d/%m') }}</span>
+      {% if pred and not tbd %}
+        {% if match.is_finished %}
+          {% if pred.points_earned == 1 %}
+            <span class="bpred-badge bpred-winner">⚽ +1</span>
+          {% else %}
+            <span class="bpred-badge bpred-miss">❌ 0</span>
+          {% endif %}
+        {% elif pred.predicted_outcome %}
+          <span class="bpred-badge bpred-open">
+            {% if pred.predicted_outcome == '1' %}Gana {{ match.team1.split(' ')[-1] }}
+            {% elif pred.predicted_outcome == '2' %}Gana {{ match.team2.split(' ')[-1] }}
+            {% else %}Empate{% endif %}
+          </span>
+        {% endif %}
+      {% elif not tbd and match.is_open %}
+        <a href="/predict/{{ match.id }}" style="font-size:.63rem;color:#3949ab;font-weight:700;">+ predecir</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
 <div class="bracket-page">
 
   <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
@@ -256,62 +313,6 @@
 
 </div>
 {% endblock %}
-
-{% macro _bmatch(match, preds) %}
-  {% set pred = preds.get(match.id) %}
-  {% set tbd = match.team1 == 'TBD' %}
-  <div class="bmatch {{ 'finished' if match.is_finished }}">
-    <!-- Row: team1 -->
-    <div class="bmatch-row">
-      {% if tbd %}
-        <span class="btbd">Por definir</span>
-        <span class="bscore" style="color:#e2e8f0;">–</span>
-      {% else %}
-        <span class="bteam {{ 'winner' if match.is_finished and match.score1_real > match.score2_real }}">
-          {{ match.team1 | truncate(14, true, '…') }}
-        </span>
-        <span class="bscore">
-          {% if match.is_finished %}{{ match.score1_real }}
-          {% elif not match.is_open %}<span style="color:#e2e8f0;">–</span>
-          {% endif %}
-        </span>
-      {% endif %}
-    </div>
-    <!-- Row: team2 -->
-    <div class="bmatch-row">
-      {% if tbd %}
-        <span class="btbd">Por definir</span>
-        <span class="bscore" style="color:#e2e8f0;">–</span>
-      {% else %}
-        <span class="bteam {{ 'winner' if match.is_finished and match.score2_real > match.score1_real }}">
-          {{ match.team2 | truncate(14, true, '…') }}
-        </span>
-        <span class="bscore">
-          {% if match.is_finished %}{{ match.score2_real }}
-          {% elif not match.is_open %}<span style="color:#e2e8f0;">–</span>
-          {% endif %}
-        </span>
-      {% endif %}
-    </div>
-    <!-- Footer: date + prediction -->
-    <div class="bmatch-footer">
-      <span class="bmatch-date">{{ match.match_datetime.strftime('%d/%m') }}</span>
-      {% if pred and not tbd %}
-        {% if match.is_finished %}
-          {% if pred.points_earned == 1 %}
-            <span class="bpred-badge bpred-winner">⚽ +1</span>
-          {% else %}
-            <span class="bpred-badge bpred-miss">❌ 0</span>
-          {% endif %}
-        {% else %}
-          <span class="bpred-badge bpred-open">{{ pred.outcome_short }}</span>
-        {% endif %}
-      {% elif not tbd and match.is_open %}
-        <a href="/predict/{{ match.id }}" style="font-size:.63rem;color:#3949ab;font-weight:700;">+ predecir</a>
-      {% endif %}
-    </div>
-  </div>
-{% endmacro %}
 
 {% block scripts %}
 <script>
