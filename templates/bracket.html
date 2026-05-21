@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% block title %}Bracket — Polla batuquito 2026{% endblock %}
+
+{% block styles %}
+<style>
+  /* ── Layout ─────────────────────────────────────────────── */
+  body { overflow: hidden; }
+  .bracket-page { display: flex; flex-direction: column; height: calc(100vh - 60px); }
+  .bracket-toolbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 16px; background: #fff; border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+  }
+  .bracket-tabs button {
+    padding: 4px 14px; border-radius: 20px; border: 1px solid #dde3f0;
+    font-weight: 700; font-size: .82rem; cursor: pointer; background: #fff; color: #475569;
+  }
+  .bracket-tabs button.active { background: #3949ab; color: #fff; border-color: #3949ab; }
+  .zoom-controls { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .zoom-btn {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid #dde3f0;
+    background: #fff; cursor: pointer; font-size: 1rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; color: #1e293b;
+  }
+  .zoom-btn:hover { background: #eef2ff; }
+  #zoom-label { font-size: .78rem; font-weight: 700; color: #475569; min-width: 40px; text-align: center; }
+
+  /* ── Viewport ────────────────────────────────────────────── */
+  .bracket-viewport {
+    flex: 1; overflow: hidden; position: relative;
+    cursor: grab; user-select: none; background: #f8faff;
+  }
+  .bracket-viewport.dragging { cursor: grabbing; }
+  .bracket-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+  /* ── Group grid ──────────────────────────────────────────── */
+  #view-groups { padding: 20px; }
+  .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .group-card-b { background: #fff; border: 1px solid #dde3f0; border-radius: 10px; overflow: hidden; }
+  .group-card-b-header {
+    background: #bfdbfe; color: #1e293b; font-weight: 900;
+    font-size: .72rem; text-transform: uppercase; letter-spacing: 1px; padding: 5px 10px;
+  }
+  .gmatch {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 10px; border-bottom: 1px solid #f1f5f9; font-size: .78rem;
+  }
+  .gmatch:last-child { border-bottom: none; }
+  .gteam { font-weight: 700; color: #1e293b; flex: 1; }
+  .gteam.right { text-align: right; }
+  .gscore {
+    font-weight: 800; color: #1e293b; padding: 0 8px;
+    min-width: 50px; text-align: center;
+  }
+  .gpred { font-size: .7rem; color: #3949ab; font-weight: 700; }
+
+  /* ── Knockout bracket ────────────────────────────────────── */
+  #view-bracket { padding: 30px 40px; }
+  .bracket-wrap { display: flex; align-items: stretch; }
+
+  .bround {
+    display: flex; flex-direction: column;
+    width: 185px; flex-shrink: 0;
+    margin-right: 40px;
+  }
+  .bround:last-child { margin-right: 0; }
+  .bround-label {
+    font-size: .65rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: 1px; color: #94a3b8; margin-bottom: 8px; text-align: center;
+  }
+
+  .bpair { display: flex; flex-direction: column; flex: 1; }
+  .bslot { flex: 1; display: flex; align-items: center; position: relative; min-height: 70px; }
+
+  /* ── Exit connectors (right side of each slot in a pair) ── */
+  .bpair > .bslot:first-child::after {
+    content: ''; position: absolute;
+    right: -21px; top: 50%;
+    width: 21px; height: calc(50% + 1px);
+    border-top: 2px solid #cbd5e1;
+    border-right: 2px solid #cbd5e1;
+  }
+  .bpair > .bslot:last-child::after {
+    content: ''; position: absolute;
+    right: -21px; top: 0;
+    width: 21px; height: calc(50% + 1px);
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 2px solid #cbd5e1;
+  }
+
+  /* ── Entry connector (left side for all except R32) ──────── */
+  .bround.has-entry .bslot::before {
+    content: ''; position: absolute;
+    left: -20px; top: 50%;
+    width: 20px; height: 2px;
+    background: #cbd5e1;
+    transform: translateY(-50%);
+  }
+
+  /* ── Match card ───────────────────────────────────────────── */
+  .bmatch {
+    width: 185px; background: #fff;
+    border: 1px solid #dde3f0; border-radius: 8px;
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    transition: box-shadow .15s;
+  }
+  .bmatch:hover { box-shadow: 0 3px 8px rgba(0,0,0,.1); }
+  .bmatch.finished { border-color: #bfdbfe; }
+  .bmatch-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 8px; gap: 4px;
+  }
+  .bmatch-row:first-child { border-bottom: 1px solid #f1f5f9; }
+  .bteam { font-size: .78rem; font-weight: 700; color: #1e293b; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bscore {
+    font-size: .85rem; font-weight: 900; color: #1e293b;
+    min-width: 18px; text-align: center;
+  }
+  .bteam.winner { color: #1e40af; }
+  .btbd { font-size: .72rem; color: #94a3b8; font-weight: 600; }
+  .bmatch-footer {
+    padding: 3px 8px; font-size: .65rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f8faff;
+  }
+  .bmatch-date { color: #94a3b8; }
+  .bpred-badge {
+    border-radius: 3px; padding: 1px 5px; font-size: .63rem; font-weight: 800;
+  }
+  .bpred-exact  { background: #dcfce7; color: #166534; }
+  .bpred-winner { background: #fef3c7; color: #92400e; }
+  .bpred-miss   { background: #fee2e2; color: #991b1b; }
+  .bpred-open   { background: #eef2ff; color: #3949ab; }
+
+  /* ── Third place ─────────────────────────────────────────── */
+  .tercero-wrap {
+    margin-top: 30px; display: flex; align-items: center; gap: 12px;
+  }
+  .tercero-label {
+    font-size: .7rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: 1px; color: #94a3b8; writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bracket-page">
+
+  <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
+  <div class="bracket-toolbar">
+    <div class="bracket-tabs">
+      <button class="active" onclick="showView('groups')">📋 Grupos</button>
+      <button onclick="showView('bracket')">🏆 Bracket</button>
+    </div>
+    <div class="zoom-controls" id="zoom-controls" style="display:none;">
+      <button class="zoom-btn" onclick="zoom(0.8)">−</button>
+      <span id="zoom-label">100%</span>
+      <button class="zoom-btn" onclick="zoom(1.25)">+</button>
+      <button class="zoom-btn" title="Fit to screen" onclick="fitToScreen()" style="width:auto;padding:0 8px;font-size:.75rem;">Fit</button>
+      <button class="zoom-btn" title="Reset" onclick="resetView()" style="width:auto;padding:0 8px;font-size:.75rem;">Reset</button>
+    </div>
+    <div style="margin-left:auto; font-size:.78rem; color:#475569; font-weight:600;" id="hint-groups">
+      <i class="bi bi-arrows-move"></i> Arrastrá y usá la rueda para hacer zoom en el bracket
+    </div>
+  </div>
+
+  <!-- ── Viewport ────────────────────────────────────────────────────────── -->
+  <div class="bracket-viewport" id="viewport">
+    <div class="bracket-canvas" id="canvas">
+
+      <!-- ══ GRUPOS ══════════════════════════════════════════════════════ -->
+      <div id="view-groups">
+        <h5 style="color:#1e293b; margin-bottom:16px;">⚽ Fase de Grupos</h5>
+        <div class="groups-grid">
+          {% for group_name, matches in groups.items() %}
+            <div class="group-card-b">
+              <div class="group-card-b-header">{{ group_name }}</div>
+              {% for match in matches %}
+                {% set pred = user_predictions.get(match.id) %}
+                <div class="gmatch">
+                  <span class="gteam right">{{ match.team1 }}</span>
+                  <span class="gscore">
+                    {% if match.is_finished %}
+                      {{ match.score1_real }}–{{ match.score2_real }}
+                    {% else %}
+                      <span style="color:#94a3b8;font-size:.7rem;">{{ match.match_datetime.strftime('%d/%m') }}</span>
+                    {% endif %}
+                  </span>
+                  <span class="gteam">{{ match.team2 }}</span>
+                  {% if pred %}
+                    <span class="gpred ms-1">
+                      {% if match.is_finished %}
+                        {% if pred.points_earned == 3 %}🏆{% elif pred.points_earned == 1 %}⚽{% else %}❌{% endif %}
+                      {% else %}
+                        {{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}
+                      {% endif %}
+                    </span>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ══ BRACKET ═════════════════════════════════════════════════════ -->
+      <div id="view-bracket" style="display:none;">
+        <h5 style="color:#1e293b; margin-bottom:20px;">🏆 Fase Eliminatoria</h5>
+
+        <div class="bracket-wrap">
+          {% for stage in knockout_order %}
+            {% set matches = knockout.get(stage, []) %}
+            {% set is_first = loop.first %}
+            <div class="bround {{ 'has-entry' if not loop.first }}">
+              <div class="bround-label">{{ stage }}</div>
+
+              {% if stage == "Final" %}
+                <!-- Final: single slot, no pair -->
+                <div class="bpair" style="justify-content:center;">
+                  <div class="bslot" style="min-height:100px;">
+                    {% if matches %}
+                      {{ _bmatch(matches[0], user_predictions) }}
+                    {% endif %}
+                  </div>
+                </div>
+              {% else %}
+                {% for pair in matches | batch(2) %}
+                  <div class="bpair">
+                    {% for match in pair %}
+                      <div class="bslot">
+                        {{ _bmatch(match, user_predictions) }}
+                      </div>
+                    {% endfor %}
+                    {% if pair | length == 1 %}
+                      <div class="bslot"></div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Tercer puesto -->
+        {% if tercero %}
+          <div class="tercero-wrap">
+            <span class="tercero-label">Tercer puesto</span>
+            {{ _bmatch(tercero, user_predictions) }}
+          </div>
+        {% endif %}
+      </div>
+
+    </div><!-- /canvas -->
+  </div><!-- /viewport -->
+
+</div>
+{% endblock %}
+
+{% macro _bmatch(match, preds) %}
+  {% set pred = preds.get(match.id) %}
+  {% set tbd = match.team1 == 'TBD' %}
+  <div class="bmatch {{ 'finished' if match.is_finished }}">
+    <!-- Row: team1 -->
+    <div class="bmatch-row">
+      {% if tbd %}
+        <span class="btbd">Por definir</span>
+        <span class="bscore" style="color:#e2e8f0;">–</span>
+      {% else %}
+        <span class="bteam {{ 'winner' if match.is_finished and match.score1_real > match.score2_real }}">
+          {{ match.team1 | truncate(14, true, '…') }}
+        </span>
+        <span class="bscore">
+          {% if match.is_finished %}{{ match.score1_real }}
+          {% elif not match.is_open %}<span style="color:#e2e8f0;">–</span>
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+    <!-- Row: team2 -->
+    <div class="bmatch-row">
+      {% if tbd %}
+        <span class="btbd">Por definir</span>
+        <span class="bscore" style="color:#e2e8f0;">–</span>
+      {% else %}
+        <span class="bteam {{ 'winner' if match.is_finished and match.score2_real > match.score1_real }}">
+          {{ match.team2 | truncate(14, true, '…') }}
+        </span>
+        <span class="bscore">
+          {% if match.is_finished %}{{ match.score2_real }}
+          {% elif not match.is_open %}<span style="color:#e2e8f0;">–</span>
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+    <!-- Footer: date + prediction -->
+    <div class="bmatch-footer">
+      <span class="bmatch-date">{{ match.match_datetime.strftime('%d/%m') }}</span>
+      {% if pred and not tbd %}
+        {% if match.is_finished %}
+          {% if pred.points_earned == 3 %}
+            <span class="bpred-badge bpred-exact">🏆 +3</span>
+          {% elif pred.points_earned == 1 %}
+            <span class="bpred-badge bpred-winner">⚽ +1</span>
+          {% else %}
+            <span class="bpred-badge bpred-miss">❌ 0</span>
+          {% endif %}
+        {% else %}
+          <span class="bpred-badge bpred-open">{{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}</span>
+        {% endif %}
+      {% elif not tbd and match.is_open %}
+        <a href="/predict/{{ match.id }}" style="font-size:.63rem;color:#3949ab;font-weight:700;">+ predecir</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% block scripts %}
+<script>
+// ── View switching ────────────────────────────────────────────────────────
+function showView(v) {
+  document.getElementById('view-groups').style.display  = v === 'groups'  ? '' : 'none';
+  document.getElementById('view-bracket').style.display = v === 'bracket' ? '' : 'none';
+  document.getElementById('zoom-controls').style.display = v === 'bracket' ? 'flex' : 'none';
+  document.querySelectorAll('.bracket-tabs button').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0) === (v === 'groups'));
+  });
+  if (v === 'bracket') { resetView(); fitToScreen(); }
+}
+
+// ── Zoom / Pan ────────────────────────────────────────────────────────────
+const viewport = document.getElementById('viewport');
+const canvas   = document.getElementById('canvas');
+let scale = 1, tx = 0, ty = 0;
+let dragging = false, startX, startY, startTx, startTy;
+
+function applyTransform() {
+  canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+  document.getElementById('zoom-label').textContent = Math.round(scale * 100) + '%';
+}
+
+function zoom(factor, cx, cy) {
+  const rect = viewport.getBoundingClientRect();
+  cx = cx ?? rect.width / 2;
+  cy = cy ?? rect.height / 2;
+  const newScale = Math.min(Math.max(0.15, scale * factor), 4);
+  tx = cx - (cx - tx) * (newScale / scale);
+  ty = cy - (cy - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}
+
+function fitToScreen() {
+  const rect  = viewport.getBoundingClientRect();
+  const cw    = canvas.scrollWidth;
+  const ch    = canvas.scrollHeight;
+  const view  = document.getElementById(
+    document.getElementById('view-bracket').style.display !== 'none' ? 'view-bracket' : 'view-groups'
+  );
+  const vw = view.scrollWidth || cw;
+  const vh = view.scrollHeight || ch;
+  scale = Math.min((rect.width - 40) / vw, (rect.height - 40) / vh, 1);
+  tx = (rect.width  - vw * scale) / 2;
+  ty = 20;
+  applyTransform();
+}
+
+function resetView() { scale = 1; tx = 30; ty = 30; applyTransform(); }
+
+// Mouse wheel zoom
+viewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = viewport.getBoundingClientRect();
+  zoom(e.deltaY < 0 ? 1.1 : 0.9, e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
+
+// Mouse drag pan
+viewport.addEventListener('mousedown', e => {
+  dragging = true; startX = e.clientX; startY = e.clientY;
+  startTx = tx; startTy = ty;
+  viewport.classList.add('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  tx = startTx + e.clientX - startX;
+  ty = startTy + e.clientY - startY;
+  applyTransform();
+});
+window.addEventListener('mouseup', () => { dragging = false; viewport.classList.remove('dragging'); });
+
+// Touch pinch zoom + drag
+let lastDist = 0, lastTouchX, lastTouchY;
+viewport.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  } else if (e.touches.length === 1) {
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    startTx = tx; startTy = ty;
+  }
+}, { passive: true });
+viewport.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const rect = viewport.getBoundingClientRect();
+    zoom(dist / lastDist, cx - rect.left, cy - rect.top);
+    lastDist = dist;
+  } else if (e.touches.length === 1) {
+    tx = startTx + e.touches[0].clientX - startX;
+    ty = startTy + e.touches[0].clientY - startY;
+    applyTransform();
+  }
+}, { passive: false });
+
+// Init
+resetView();
+</script>
+{% endblock %}

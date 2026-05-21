@@ -177,6 +177,41 @@ def results():
     return render_template("results.html", user=user, finished=finished, user_predictions=user_predictions)
 
 
+@app.route("/bracket")
+def bracket():
+    user = current_user()
+
+    knockout_order = ["Dieciseisavos", "Octavos", "Cuartos de final", "Semifinales", "Final"]
+    knockout = {}
+    for stage in knockout_order:
+        matches = Match.query.filter_by(stage=stage).order_by(Match.match_datetime).all()
+        if matches:
+            knockout[stage] = matches
+
+    tercero = Match.query.filter_by(stage="Tercer puesto").first()
+
+    groups = {}
+    for letter in "ABCDEFGHIJKL":
+        stage = f"Grupo {letter}"
+        matches = Match.query.filter_by(stage=stage).order_by(Match.match_datetime).all()
+        if matches:
+            groups[stage] = matches
+
+    user_predictions = {}
+    if user:
+        for p in Prediction.query.filter_by(user_id=user.id).all():
+            user_predictions[p.match_id] = p
+
+    return render_template("bracket.html",
+        user=user,
+        knockout=knockout,
+        knockout_order=knockout_order,
+        tercero=tercero,
+        groups=groups,
+        user_predictions=user_predictions,
+    )
+
+
 @app.route("/leaderboard")
 def leaderboard():
     user = current_user()
