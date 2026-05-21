@@ -7,10 +7,17 @@ def _winner(s1: int, s2: int) -> str:
 
 
 def calculate_points(pred_s1: int, pred_s2: int, real_s1: int, real_s2: int) -> int:
+    # Marcador exacto: 3 pts (1 resultado + 2 bonus)
     if pred_s1 == real_s1 and pred_s2 == real_s2:
         return 3
-    if _winner(pred_s1, pred_s2) == _winner(real_s1, real_s2):
+
+    correct_outcome = _winner(pred_s1, pred_s2) == _winner(real_s1, real_s2)
+    one_number = (pred_s1 == real_s1) or (pred_s2 == real_s2)
+
+    # Resultado correcto O un número acertado: 1 pt
+    if correct_outcome or one_number:
         return 1
+
     return 0
 
 
