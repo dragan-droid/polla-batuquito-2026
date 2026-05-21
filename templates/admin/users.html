@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin — Usuarios{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <h5 class="mb-0 me-auto"><i class="bi bi-people-fill"></i> Gestión de usuarios</h5>
+  <a href="/admin" class="btn btn-outline-secondary btn-sm">← Volver</a>
+</div>
+
+{% if users %}
+  <div class="card shadow">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead style="background:#eef2ff;">
+          <tr>
+            <th style="color:#1e293b;">Nombre</th>
+            <th class="text-center" style="color:#1e293b;">Predicciones</th>
+            <th class="text-center" style="color:#1e293b;">Apuesta especial</th>
+            <th class="text-end" style="color:#1e293b;">Puntos</th>
+            <th style="color:#1e293b;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr>
+              <td style="color:#1e293b; font-weight:700; vertical-align:middle;">
+                {{ u.name }}
+              </td>
+              <td class="text-center" style="vertical-align:middle; color:#1e293b;">
+                {{ u.predictions | length }}
+              </td>
+              <td class="text-center" style="vertical-align:middle;">
+                {% if u.special_bet %}
+                  <span class="badge" style="background:#dcfce7; color:#166534;">✓ hecha</span>
+                {% else %}
+                  <span style="color:#94a3b8; font-size:.85rem;">—</span>
+                {% endif %}
+              </td>
+              <td class="text-end" style="vertical-align:middle;">
+                <span class="badge bg-warning text-dark">{{ u.total_points }} pts</span>
+              </td>
+              <td class="text-end" style="vertical-align:middle;">
+                <form method="POST" action="/admin/users/{{ u.id }}/delete"
+                      onsubmit="return confirm('¿Eliminar a {{ u.name }} y todas sus predicciones? Esta acción no se puede deshacer.')">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-trash"></i> Eliminar
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <small class="d-block mt-2" style="color:#475569; font-weight:600;">
+    Al eliminar un usuario se borran todas sus predicciones y apuestas especiales. No se puede deshacer.
+  </small>
+{% else %}
+  <div class="card">
+    <div class="card-body text-center py-5" style="color:#475569;">
+      No hay usuarios registrados todavía.
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

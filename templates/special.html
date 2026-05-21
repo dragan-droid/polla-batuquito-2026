@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Apuesta especial — Polla batuquito 2026{% endblock %}
+
+{% block styles %}
+<style>
+  .group-card {
+    border: 1px solid #e2e8f0; border-radius: 10px;
+    overflow: hidden; height: 100%;
+  }
+  .group-card-header {
+    background: #bfdbfe; color: #1e293b;
+    font-weight: 900; font-size: .75rem;
+    letter-spacing: 1px; text-transform: uppercase;
+    padding: 6px 12px;
+  }
+  .team-check-label {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 600; font-size: .88rem; color: #1e293b;
+    transition: background .1s;
+  }
+  .team-check-label:last-child { border-bottom: none; }
+  .team-check-label:hover { background: #f0f4ff; }
+  .team-check-label input { accent-color: #3949ab; width: 16px; height: 16px; flex-shrink: 0; }
+  .team-check-label.selected { background: #eef2ff; }
+  .team-check-label.correct { background: #dcfce7; }
+  .team-check-label.wrong   { background: #fee2e2; }
+  .team-check-label.disabled { opacity: .6; cursor: default; }
+  .group-pts-badge {
+    font-size: .7rem; font-weight: 800; padding: 1px 6px;
+    border-radius: 4px; margin-left: auto; flex-shrink: 0;
+  }
+  .pts-ok  { background: #dcfce7; color: #166534; }
+  .pts-no  { background: #fee2e2; color: #991b1b; }
+  .pts-nd  { background: #f1f5f9; color: #475569; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-9">
+
+  <h5 class="mb-1">⭐ Apuesta especial</h5>
+  <p style="color:#475569; font-weight:600;" class="mb-4">
+    Cierra el {{ deadline.strftime('%d/%m/%Y a las %H:%M') }} UTC (inicio del torneo).
+  </p>
+
+  {% if not is_open %}
+    <div class="alert alert-warning fw-bold">🔒 Las apuestas especiales están cerradas.</div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════
+       SECCIÓN 1: CAMPEÓN Y SEMIFINALISTAS
+  ═══════════════════════════════════════════════════ -->
+  <div class="card shadow mb-4">
+    <div class="card-header d-flex align-items-center">
+      <h6 class="mb-0" style="color:#1e293b;">🏆 Campeón y Semifinalistas</h6>
+      <div class="ms-auto d-flex gap-2">
+        <span class="badge" style="background:#dcfce7;color:#166534;font-weight:800;">20 pts campeón</span>
+        <span class="badge" style="background:#dbeafe;color:#1e40af;font-weight:800;">5 pts x semifinalista</span>
+      </div>
+    </div>
+    <div class="card-body">
+
+      {% if existing and (existing.champion or existing.semis_list) %}
+        <!-- Apuesta actual -->
+        <div class="row g-3 mb-3 p-3 rounded" style="background:#f8faff; border:1px solid #e2e8f0;">
+          <div class="col-md-4">
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;color:#475569;">Campeón</div>
+            <div style="font-size:1rem;font-weight:800;color:#1e293b;">{{ existing.champion or '—' }}</div>
+            {% if existing.champion_points is not none %}
+              <span class="badge {{ 'bg-success' if existing.champion_points == 20 else 'bg-danger' }}">
+                {{ '+20' if existing.champion_points == 20 else '0' }} pts
+              </span>
+            {% endif %}
+          </div>
+          <div class="col-md-8">
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;color:#475569;">Semifinalistas</div>
+            <div class="d-flex flex-wrap gap-1 mt-1">
+              {% for t in existing.semis_list %}
+                {% set in_result = result and result.champion and t in result.semis_set %}
+                <span class="badge" style="background:{{ '#dcfce7' if in_result else ('#fee2e2' if result and result.champion else '#eef2ff') }};
+                  color:#1e293b;font-weight:700;font-size:.82rem;">{{ t }}</span>
+              {% endfor %}
+            </div>
+            {% if existing.semi_points is not none %}
+              <small style="color:#475569;font-weight:700;">Semi: {{ existing.semi_points }} pts</small>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if is_open %}
+        <form method="POST" action="/special">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold" style="color:#1e293b;">🏆 Campeón del mundo</label>
+              <select class="form-select" name="champion" required>
+                <option value="">— Seleccioná —</option>
+                {% for team in teams %}
+                  <option value="{{ team }}" {{ 'selected' if existing and existing.champion == team }}>{{ team }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% for i in range(1, 5) %}
+              <div class="col-md-3">
+                <label class="form-label fw-bold" style="color:#1e293b;">Semi {{ i }}</label>
+                <select class="form-select" name="semi{{ i }}" required>
+                  <option value="">— —</option>
+                  {% for team in teams %}
+                    <option value="{{ team }}" {{ 'selected' if existing and existing['semi' ~ i] == team }}>{{ team }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            {% endfor %}
+          </div>
+          <small class="d-block mt-2" style="color:#475569;font-weight:600;">El campeón debe estar entre los 4 semifinalistas.</small>
+          <button type="submit" class="btn btn-primary mt-3">
+            <i class="bi bi-check-circle"></i> Guardar campeón y semifinalistas
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECCIÓN 2: CLASIFICADOS POR GRUPO
+  ═══════════════════════════════════════════════════ -->
+  <div class="card shadow mb-4">
+    <div class="card-header d-flex align-items-center">
+      <h6 class="mb-0" style="color:#1e293b;">⚽ Clasificados por grupo</h6>
+      <span class="badge ms-auto" style="background:#bfdbfe;color:#1e40af;font-weight:800;">1 pt por equipo acertado</span>
+    </div>
+    <div class="card-body">
+      <p style="color:#475569;font-weight:600;font-size:.88rem;" class="mb-3">
+        Seleccioná los <strong>2 equipos</strong> que clasifican de cada grupo.
+        Máximo {{ groups_with_teams|length * 2 }} puntos ({{ groups_with_teams|length }} grupos × 2 equipos).
+      </p>
+
+      <form method="POST" action="/special/groups" id="groups-form">
+        <div class="row g-3">
+          {% for group_name, teams_in_group in groups_with_teams.items() %}
+            {% set gq_bet = existing_gq.get(group_name, []) %}
+            {% set gq_real = gq_results.get(group_name) %}
+            <div class="col-md-4 col-sm-6">
+              <div class="group-card">
+                <div class="group-card-header d-flex align-items-center">
+                  {{ group_name }}
+                  {% if gq_bet %}
+                    {% if gq_real and gq_real.team1 %}
+                      {% set pts = gq_bet | select_in_set(gq_real) if gq_real else 0 %}
+                      {# Calculado en Python, mostrar desde existing_gq_points si lo tenemos #}
+                    {% endif %}
+                    <span class="ms-auto" style="font-size:.65rem;font-weight:600;color:#3949ab;">{{ gq_bet|length }} sel.</span>
+                  {% endif %}
+                </div>
+                <div>
+                  {% for team in teams_in_group %}
+                    {% set is_selected = team in gq_bet %}
+                    {% set is_correct = gq_real and team in gq_real.teams_set %}
+                    {% set result_known = gq_real and gq_real.team1 %}
+                    <label class="team-check-label
+                      {{ 'selected' if is_selected and not result_known }}
+                      {{ 'correct' if is_selected and result_known and is_correct }}
+                      {{ 'wrong' if is_selected and result_known and not is_correct }}
+                      {{ 'disabled' if not is_open }}">
+                      <input type="checkbox"
+                        name="gq_{{ group_name }}"
+                        value="{{ team }}"
+                        {{ 'checked' if is_selected }}
+                        {{ 'disabled' if not is_open }}
+                        onchange="limitChecks(this, 'gq_{{ group_name }}')">
+                      {{ team }}
+                      {% if result_known and is_correct %}
+                        <span class="group-pts-badge pts-ok ms-auto">✓</span>
+                      {% elif result_known and is_selected %}
+                        <span class="group-pts-badge pts-no ms-auto">✗</span>
+                      {% endif %}
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if is_open %}
+          <button type="submit" class="btn btn-primary mt-4" id="submit-groups">
+            <i class="bi bi-check-circle"></i> Guardar clasificados por grupo
+          </button>
+          <span id="groups-warning" class="ms-3" style="color:#dc2626;font-weight:700;font-size:.85rem;display:none;">
+            ⚠ Seleccioná exactamente 2 por grupo antes de guardar.
+          </span>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Resumen de puntos especiales -->
+  {% if existing %}
+    {% set champ_pts = existing.champion_points or 0 %}
+    {% set semi_pts = existing.semi_points or 0 %}
+    {% set gq_pts = namespace(n=0) %}
+    {% for gqb in existing.group_qualifier_bets %}
+      {% if gqb.points is not none %}{% set gq_pts.n = gq_pts.n + gqb.points %}{% endif %}
+    {% endfor %}
+    {% if existing.champion_points is not none or gq_pts.n > 0 %}
+      <div class="card" style="border:2px solid #3949ab;">
+        <div class="card-body">
+          <h6 style="color:#1e293b;">Tus puntos especiales</h6>
+          <div class="row text-center g-2">
+            <div class="col-4">
+              <div style="font-size:1.4rem;font-weight:900;color:#16a34a;">{{ champ_pts }}</div>
+              <small style="font-weight:700;color:#475569;">Campeón</small>
+            </div>
+            <div class="col-4">
+              <div style="font-size:1.4rem;font-weight:900;color:#2563eb;">{{ semi_pts }}</div>
+              <small style="font-weight:700;color:#475569;">Semifinalistas</small>
+            </div>
+            <div class="col-4">
+              <div style="font-size:1.4rem;font-weight:900;color:#7c3aed;">{{ gq_pts.n }}</div>
+              <small style="font-weight:700;color:#475569;">Clasificados</small>
+            </div>
+          </div>
+          <div class="text-center mt-2">
+            <strong style="font-size:1.1rem;color:#1e293b;">Total especial: {{ champ_pts + semi_pts + gq_pts.n }} pts</strong>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function limitChecks(checkbox, groupName) {
+  const checks = document.querySelectorAll(`input[name="${CSS.escape(groupName)}"]`);
+  const checked = Array.from(checks).filter(c => c.checked);
+  if (checked.length > 2) {
+    checkbox.checked = false;
+  }
+  // Actualizar clase visual
+  checks.forEach(c => {
+    const label = c.closest('.team-check-label');
+    label.classList.toggle('selected', c.checked);
+  });
+}
+
+// Validar antes de submit
+document.getElementById('groups-form')?.addEventListener('submit', function(e) {
+  const groups = {{ groups_with_teams.keys() | list | tojson }};
+  let ok = true;
+  groups.forEach(g => {
+    const checks = document.querySelectorAll(`input[name="gq_${g}"]:checked`);
+    if (checks.length !== 2) ok = false;
+  });
+  if (!ok) {
+    e.preventDefault();
+    document.getElementById('groups-warning').style.display = 'inline';
+  }
+});
+</script>
+{% endblock %}

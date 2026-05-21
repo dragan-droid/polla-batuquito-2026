@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Tabla de Posiciones — Polla batuquito 2026{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <h5 class="mb-3"><i class="bi bi-trophy-fill text-warning"></i> Tabla de Posiciones</h5>
+
+    {% if users %}
+      <div class="card shadow">
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead style="background:#eef2ff;">
+              <tr>
+                <th style="width:3rem; color:#1e293b;">#</th>
+                <th style="color:#1e293b;">Jugador</th>
+                <th class="text-center" style="color:#1e293b;">Exactos</th>
+                <th class="text-center" style="color:#1e293b;">Ganador</th>
+                <th class="text-end" style="color:#1e293b;">Puntos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+                {% set exact = u.predictions | selectattr('points_earned', 'equalto', 3) | list | length %}
+                {% set winner_only = u.predictions | selectattr('points_earned', 'equalto', 1) | list | length %}
+                <tr style="{% if user and u.id == user.id %}background:#eef2ff;{% endif %}">
+                  <td class="leaderboard-pos
+                    {% if loop.index == 1 %}gold
+                    {% elif loop.index == 2 %}silver
+                    {% elif loop.index == 3 %}bronze{% endif %}">
+                    {% if loop.index == 1 %}🥇
+                    {% elif loop.index == 2 %}🥈
+                    {% elif loop.index == 3 %}🥉
+                    {% else %}{{ loop.index }}{% endif %}
+                  </td>
+                  <td>
+                    <a href="/predictions/{{ u.id }}" style="color:#1e293b; font-weight:700; text-decoration:none;">
+                      {{ u.name }}
+                    </a>
+                    {% if user and u.id == user.id %}
+                      <span class="badge ms-1" style="background:#eef2ff; color:#3949ab;">vos</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center pts-exact">{{ exact }}</td>
+                  <td class="text-center pts-winner">{{ winner_only }}</td>
+                  <td class="text-end">
+                    <span class="badge bg-warning text-dark fs-6">{{ u.total_points }}</span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="mt-3">
+        <small style="color:#1e293b; font-weight:600;">
+          <span class="pts-exact">Exactos</span> = marcador exacto (3 pts) &nbsp;|&nbsp;
+          <span class="pts-winner">Ganador</span> = solo el ganador (1 pt)
+        </small>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-people" style="font-size:2rem; color:#3949ab;"></i>
+          <p class="mt-2 mb-0" style="color:#1e293b;">Aún no hay participantes.<br>
+          <a href="/join" class="text-decoration-none">¡Sé el primero en unirte!</a></p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Admin — Apuesta especial{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <h5 class="mb-0 me-auto"><i class="bi bi-trophy-fill"></i> Apuesta especial — Resultados</h5>
+  <a href="/admin" class="btn btn-outline-secondary btn-sm">← Volver</a>
+</div>
+
+<!-- CAMPEÓN Y SEMIFINALISTAS -->
+<div class="card shadow mb-4">
+  <div class="card-header"><h6 class="mb-0" style="color:#1e293b;">🏆 Campeón y Semifinalistas</h6></div>
+  <div class="card-body">
+    <form method="POST" action="/admin/special">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold" style="color:#1e293b;">Campeón</label>
+          <select class="form-select" name="champion">
+            <option value="">— No definido —</option>
+            {% for team in teams %}
+              <option value="{{ team }}" {{ 'selected' if result and result.champion == team }}>{{ team }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% for i in range(1, 5) %}
+          <div class="col-md-3">
+            <label class="form-label fw-bold" style="color:#1e293b;">Semi {{ i }}</label>
+            <select class="form-select" name="semi{{ i }}">
+              <option value="">— —</option>
+              {% for team in teams %}
+                <option value="{{ team }}" {{ 'selected' if result and result['semi' ~ i] == team }}>{{ team }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary mt-3">
+        <i class="bi bi-check-circle"></i> Guardar y calcular puntos ({{ bets|length }} apuestas)
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- CLASIFICADOS POR GRUPO -->
+<div class="card shadow mb-4">
+  <div class="card-header"><h6 class="mb-0" style="color:#1e293b;">⚽ Clasificados por grupo (1 pt cada uno)</h6></div>
+  <div class="card-body">
+    <form method="POST" action="/admin/special/groups">
+      <div class="row g-3">
+        {% for group_name, teams_in_group in groups_with_teams.items() %}
+          {% set gqr = gq_results.get(group_name) %}
+          <div class="col-md-4 col-sm-6">
+            <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+              <div style="background:#bfdbfe;padding:5px 10px;font-weight:900;font-size:.75rem;color:#1e293b;text-transform:uppercase;">
+                {{ group_name }}
+              </div>
+              <div class="p-2">
+                <div class="mb-1">
+                  <label style="font-size:.72rem;font-weight:700;color:#475569;">1° clasificado</label>
+                  <select class="form-select form-select-sm" name="real_{{ group_name }}_1">
+                    <option value="">— —</option>
+                    {% for team in teams_in_group %}
+                      <option value="{{ team }}" {{ 'selected' if gqr and gqr.team1 == team }}>{{ team }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:.72rem;font-weight:700;color:#475569;">2° clasificado</label>
+                  <select class="form-select form-select-sm" name="real_{{ group_name }}_2">
+                    <option value="">— —</option>
+                    {% for team in teams_in_group %}
+                      <option value="{{ team }}" {{ 'selected' if gqr and gqr.team2 == team }}>{{ team }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-success mt-3">
+        <i class="bi bi-check-circle"></i> Guardar clasificados y recalcular puntos
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- LISTA DE APUESTAS -->
+{% if bets %}
+  <div class="card shadow">
+    <div class="card-header"><h6 class="mb-0" style="color:#1e293b;">Apuestas registradas ({{ bets|length }})</h6></div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead style="background:#eef2ff;">
+          <tr>
+            <th style="color:#1e293b;">Jugador</th>
+            <th style="color:#1e293b;">Campeón</th>
+            <th style="color:#1e293b;">Semis</th>
+            <th style="color:#1e293b;">Clasif.</th>
+            <th class="text-end" style="color:#1e293b;">Pts especial</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bet in bets %}
+            {% set gq_pts = namespace(n=0) %}
+            {% for gqb in bet.group_qualifier_bets %}
+              {% if gqb.points is not none %}{% set gq_pts.n = gq_pts.n + gqb.points %}{% endif %}
+            {% endfor %}
+            <tr>
+              <td style="color:#1e293b;font-weight:700;">{{ bet.user.name }}</td>
+              <td style="color:#1e293b;font-size:.85rem;">
+                {{ bet.champion or '—' }}
+                {% if bet.champion_points == 20 %}<span class="badge bg-success ms-1">+20</span>
+                {% elif bet.champion_points == 0 %}<span class="badge bg-danger ms-1">0</span>{% endif %}
+              </td>
+              <td style="font-size:.8rem;">
+                {% for t in bet.semis_list %}
+                  <span class="badge me-1" style="background:{{ '#dcfce7;color:#166534' if result and t in result.semis_set else '#fee2e2;color:#991b1b' }};">{{ t.split(' ')[-1] }}</span>
+                {% endfor %}
+                {% if bet.semi_points is not none %}<strong>({{ bet.semi_points }})</strong>{% endif %}
+              </td>
+              <td style="font-size:.8rem;font-weight:700;color:#1e293b;">
+                {{ bet.group_qualifier_bets|length }}/{{ groups_with_teams|length }} grupos
+                {% if gq_pts.n > 0 %}<span class="badge bg-primary ms-1">{{ gq_pts.n }} pts</span>{% endif %}
+              </td>
+              <td class="text-end">
+                {% set total = (bet.champion_points or 0) + (bet.semi_points or 0) + gq_pts.n %}
+                {% if bet.champion_points is not none %}
+                  <span class="badge bg-warning text-dark">{{ total }}</span>
+                {% else %}
+                  <span style="color:#475569;">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

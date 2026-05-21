@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Ingresar — Polla batuquito 2026{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-5">
+    <div class="card shadow">
+      <div class="card-header text-center py-3">
+        <h4 class="mb-0">⚽ ¿Cómo te llamás?</h4>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-secondary mb-4">
+          Ingresá tu nombre para empezar a hacer predicciones. Si ya participaste antes, usá el mismo nombre para recuperar tu historial, no hagas trampa hijo de puta.
+        </p>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label" for="name">Tu nombre</label>
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              id="name"
+              name="name"
+              placeholder="Ej: Juan, María..."
+              maxlength="50"
+              autofocus
+              required
+            >
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-arrow-right-circle"></i> Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

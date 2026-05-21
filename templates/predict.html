@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Predicción — {{ match.team1 }} vs {{ match.team2 }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <a href="/" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-left"></i> Volver</a>
+
+    <div class="card shadow">
+      <div class="card-header text-center py-3">
+        <small class="text-secondary">{{ match.stage }} &nbsp;|&nbsp; {{ match.match_datetime.strftime('%d/%m/%Y %H:%M') }} UTC</small>
+        <h5 class="mt-1 mb-0">{{ match.team1 }} vs {{ match.team2 }}</h5>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-secondary text-center mb-4">
+          ¿Cómo creés que termina este partido? Ingresá tu predicción de marcador.
+        </p>
+
+        <form method="POST">
+          <div class="row align-items-center g-3 text-center mb-4">
+            <div class="col-5">
+              <label class="form-label fw-bold">{{ match.team1 }}</label>
+              <input
+                type="number"
+                class="form-control form-control-lg text-center"
+                name="score1"
+                min="0"
+                max="20"
+                value="{{ existing.predicted_score1 if existing else '' }}"
+                placeholder="0"
+                required
+                style="font-size: 2rem; font-weight: 800;"
+              >
+            </div>
+            <div class="col-2 pt-4">
+              <span style="font-size: 1.5rem; color: #546e7a;">–</span>
+            </div>
+            <div class="col-5">
+              <label class="form-label fw-bold">{{ match.team2 }}</label>
+              <input
+                type="number"
+                class="form-control form-control-lg text-center"
+                name="score2"
+                min="0"
+                max="20"
+                value="{{ existing.predicted_score2 if existing else '' }}"
+                placeholder="0"
+                required
+                style="font-size: 2rem; font-weight: 800;"
+              >
+            </div>
+          </div>
+
+          <div class="card mb-3" style="background:#0a0e1a; border-color:#1e2d4a;">
+            <div class="card-body py-2 px-3">
+              <small class="text-secondary">
+                <span class="pts-exact">🏆 3 pts</span> marcador exacto &nbsp;|&nbsp;
+                <span class="pts-winner">⚽ 1 pt</span> ganador correcto
+              </small>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-check-circle"></i>
+            {{ "Actualizar predicción" if existing else "Guardar predicción" }}
+          </button>
+        </form>
+
+        {% if existing %}
+          <div class="text-center mt-3">
+            <small class="text-secondary">
+              Predicción actual: <strong>{{ existing.predicted_score1 }} – {{ existing.predicted_score2 }}</strong>
+            </small>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

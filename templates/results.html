@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Resultados — Polla batuquito 2026{% endblock %}
+
+{% block content %}
+<h5 class="mb-3"><i class="bi bi-flag-fill"></i> Partidos terminados</h5>
+
+{% if finished %}
+  {% for match in finished %}
+    {% set pred = user_predictions.get(match.id) %}
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <small class="text-secondary">
+            {{ match.match_datetime.strftime('%d/%m/%Y') }} &nbsp;|&nbsp;
+            <span class="badge" style="background:#1e2d4a; color:#90caf9;">{{ match.stage }}</span>
+          </small>
+          <span class="badge badge-finished"><i class="bi bi-check-circle"></i> Finalizado</span>
+        </div>
+
+        <div class="row align-items-center text-center my-2">
+          <div class="col-4 text-end">
+            <span class="team-name">{{ match.team1 }}</span>
+          </div>
+          <div class="col-4">
+            <span class="score-badge">{{ match.score1_real }} – {{ match.score2_real }}</span>
+            <div class="mt-1">
+              <small class="text-secondary fw-bold">
+                {% if match.score1_real > match.score2_real %}Ganó {{ match.team1 }}
+                {% elif match.score2_real > match.score1_real %}Ganó {{ match.team2 }}
+                {% else %}Empate{% endif %}
+              </small>
+            </div>
+          </div>
+          <div class="col-4 text-start">
+            <span class="team-name">{{ match.team2 }}</span>
+          </div>
+        </div>
+
+        {% if pred %}
+          <div class="text-center mt-2 pt-2" style="border-top: 1px solid #1e2d4a;">
+            <small class="text-secondary">Tu predicción: </small>
+            <strong>{{ pred.predicted_score1 }} – {{ pred.predicted_score2 }}</strong>
+            &nbsp;
+            {% if pred.points_earned == 3 %}
+              <span class="pts-exact">🏆 +3 pts (exacto)</span>
+            {% elif pred.points_earned == 1 %}
+              <span class="pts-winner">⚽ +1 pt (ganador)</span>
+            {% elif pred.points_earned == 0 %}
+              <span class="pts-miss">❌ 0 pts</span>
+            {% endif %}
+          </div>
+        {% elif user %}
+          <div class="text-center mt-2 pt-2" style="border-top: 1px solid #1e2d4a;">
+            <small class="text-secondary"><i class="bi bi-dash-circle"></i> No hiciste una predicción para este partido.</small>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <div class="card-body text-center py-5 text-secondary">
+      <i class="bi bi-hourglass" style="font-size:2rem"></i>
+      <p class="mt-2 mb-0">Aún no hay partidos terminados.<br>
+      <small>Los resultados aparecerán acá cuando el admin los cargue.</small></p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

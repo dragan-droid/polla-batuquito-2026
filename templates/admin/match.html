@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ "Editar partido" if match else "Nuevo partido" }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <a href="/admin" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-left"></i> Volver</a>
+
+    {% if match %}
+      <!-- Info del partido -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6 class="mb-0">
+            {{ match.team1 }} vs {{ match.team2 }}
+            &nbsp;
+            {% if match.is_finished %}
+              <span class="badge badge-finished">Finalizado: {{ match.score1_real }} – {{ match.score2_real }}</span>
+            {% elif match.is_open %}
+              <span class="badge badge-open">Abierto</span>
+            {% else %}
+              <span class="badge badge-closed">Cerrado</span>
+            {% endif %}
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="text-secondary small mb-0">
+            {{ match.stage }} &nbsp;|&nbsp; {{ match.match_datetime.strftime('%d/%m/%Y %H:%M') }} UTC
+            &nbsp;|&nbsp; {{ match.predictions | length }} predicciones
+          </p>
+        </div>
+      </div>
+
+      <!-- Cargar resultado -->
+      {% if not match.is_finished %}
+        <div class="card mb-3">
+          <div class="card-header"><h6 class="mb-0"><i class="bi bi-flag-fill"></i> Cargar resultado</h6></div>
+          <div class="card-body">
+            <form method="POST">
+              <input type="hidden" name="action" value="result">
+              <div class="row g-3 align-items-end">
+                <div class="col-4">
+                  <label class="form-label">{{ match.team1 }}</label>
+                  <input type="number" class="form-control text-center" name="score1" min="0" max="20" placeholder="0" required>
+                </div>
+                <div class="col-2 text-center pb-2">–</div>
+                <div class="col-4">
+                  <label class="form-label">{{ match.team2 }}</label>
+                  <input type="number" class="form-control text-center" name="score2" min="0" max="20" placeholder="0" required>
+                </div>
+                <div class="col-2">
+                  <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-check-lg"></i> OK
+                  </button>
+                </div>
+              </div>
+              <small class="text-secondary d-block mt-2">
+                Al guardar se calculan automáticamente los puntos de las {{ match.predictions | length }} predicciones.
+              </small>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="card mb-3 border-warning">
+          <div class="card-body text-center">
+            <p class="mb-2 text-secondary">Resultado cargado: <strong>{{ match.score1_real }} – {{ match.score2_real }}</strong></p>
+            <form method="POST">
+              <input type="hidden" name="action" value="reopen">
+              <button type="submit" class="btn btn-outline-warning btn-sm"
+                onclick="return confirm('¿Reabrir este partido? Se borrarán los puntos calculados.')">
+                <i class="bi bi-arrow-counterclockwise"></i> Reabrir y borrar puntos
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Editar datos del partido -->
+      <div class="card">
+        <div class="card-header"><h6 class="mb-0"><i class="bi bi-pencil"></i> Editar datos</h6></div>
+        <div class="card-body">
+          <form method="POST">
+            <input type="hidden" name="action" value="edit">
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label">Equipo 1</label>
+                <input type="text" class="form-control" name="team1" value="{{ match.team1 }}" required maxlength="50">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Equipo 2</label>
+                <input type="text" class="form-control" name="team2" value="{{ match.team2 }}" required maxlength="50">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Fase</label>
+                <input type="text" class="form-control" name="stage" value="{{ match.stage }}" required maxlength="30">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Fecha y hora (UTC)</label>
+                <input type="datetime-local" class="form-control" name="datetime"
+                  value="{{ match.match_datetime.strftime('%Y-%m-%dT%H:%M') }}" required>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-save"></i> Guardar cambios
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Lista de predicciones -->
+      {% if match.predictions %}
+        <div class="card mt-3">
+          <div class="card-header"><h6 class="mb-0">Predicciones ({{ match.predictions | length }})</h6></div>
+          <div class="card-body p-0">
+            <table class="table table-dark table-sm mb-0" style="border-color:#1e2d4a;">
+              <thead style="background:#1a2540;">
+                <tr>
+                  <th style="border-color:#1e2d4a;">Jugador</th>
+                  <th class="text-center" style="border-color:#1e2d4a;">Predicción</th>
+                  <th class="text-center" style="border-color:#1e2d4a;">Puntos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pred in match.predictions | sort(attribute='user.name') %}
+                  <tr style="border-color:#1e2d4a;">
+                    <td>{{ pred.user.name }}</td>
+                    <td class="text-center">{{ pred.predicted_score1 }} – {{ pred.predicted_score2 }}</td>
+                    <td class="text-center">
+                      {% if pred.points_earned == 3 %}
+                        <span class="pts-exact">🏆 3</span>
+                      {% elif pred.points_earned == 1 %}
+                        <span class="pts-winner">⚽ 1</span>
+                      {% elif pred.points_earned == 0 %}
+                        <span class="pts-miss">❌ 0</span>
+                      {% else %}
+                        <span class="text-secondary">—</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+    {% else %}
+      <!-- Crear nuevo partido -->
+      <div class="card">
+        <div class="card-header"><h6 class="mb-0"><i class="bi bi-plus-circle"></i> Nuevo partido</h6></div>
+        <div class="card-body">
+          <form method="POST">
+            <input type="hidden" name="action" value="edit">
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label">Equipo 1</label>
+                <input type="text" class="form-control" name="team1" placeholder="🇦🇷 Argentina" required maxlength="50">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Equipo 2</label>
+                <input type="text" class="form-control" name="team2" placeholder="🇧🇷 Brasil" required maxlength="50">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Fase</label>
+                <input type="text" class="form-control" name="stage" placeholder="Cuartos de final" required maxlength="30">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Fecha y hora (UTC)</label>
+                <input type="datetime-local" class="form-control" name="datetime" required>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-plus-circle"></i> Crear partido
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

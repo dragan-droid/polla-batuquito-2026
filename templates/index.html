@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block title %}Fixture — Polla batuquito 2026{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- ── Fixture principal ─────────────────────────────────────────────────── -->
+  <div class="col-lg-8">
+
+    <!-- Filtros de fase -->
+    <div class="mb-3">
+      <div class="d-flex flex-wrap gap-1 align-items-center">
+        <button class="btn btn-sm btn-primary filter-btn active" data-filter="todos">Todos</button>
+        {% for stage in stages %}
+          {% if stage.startswith("Grupo") %}
+            {# primer grupo activa el botón "Grupos" y los individuales #}
+          {% endif %}
+        {% endfor %}
+        <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="grupos">Fase de Grupos</button>
+        {% for stage in stages %}
+          {% if not stage.startswith("Grupo") %}
+            <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="{{ stage | lower | replace(' ', '-') }}">{{ stage }}</button>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <!-- sub-filtros de grupo (se muestran solo cuando filter=grupos) -->
+      <div class="d-flex flex-wrap gap-1 mt-1" id="subfilters" style="display:none!important">
+        <span class="text-secondary small align-self-center me-1">Grupo:</span>
+        {% for stage in stages %}
+          {% if stage.startswith("Grupo") %}
+            <button class="btn btn-sm btn-outline-info subfilter-btn" data-subfilter="{{ stage }}">{{ stage[-1] }}</button>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Fixture por fecha -->
+    {% if date_groups %}
+      {% for day, matches in date_groups %}
+        {% set day_slug = day.strftime('%Y-%m-%d') %}
+        <div class="date-block mb-2" data-day="{{ day_slug }}">
+
+          <!-- Cabecera de fecha -->
+          <div class="d-flex align-items-center mb-1 mt-3">
+            <div class="date-pill me-2">
+              <span class="day-num">{{ day.strftime('%d') }}</span>
+              <span class="day-month">{{ day.strftime('%b').upper() }}</span>
+            </div>
+            <span class="text-secondary small">
+              {% set dias = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] %}
+              {{ dias[day.weekday()] }} {{ day.strftime('%d de') }}
+              {% set meses = ['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
+              {{ meses[day.month] }} {{ day.strftime('%Y') }}
+            </span>
+          </div>
+
+          <!-- Matches del día -->
+          <div class="card fixture-card">
+            <div class="card-body p-0">
+              {% for match in matches %}
+                {% set pred = user_predictions.get(match.id) %}
+                <div class="fixture-row
+                  {% if loop.last %}{% else %}border-bottom{% endif %}
+                  {% if match.is_finished %}finished{% endif %}"
+                  data-stage="{{ match.stage }}"
+                  data-stage-slug="{{ match.stage | lower | replace(' ', '-') }}"
+                  data-is-group="{{ 'true' if match.stage.startswith('Grupo') else 'false' }}">
+
+                  <div class="row align-items-center g-0 py-2 px-3">
+
+                    <!-- Fase + hora -->
+                    <div class="col-auto me-3" style="min-width:110px">
+                      <div class="stage-chip stage-{{ match.stage | lower | replace(' ', '-') | replace('°','') }}">
+                        {{ match.stage }}
+                      </div>
+                      <div class="match-time">{{ match.match_datetime.strftime('%H:%M') }} UTC</div>
+                    </div>
+
+                    <!-- Equipo 1 -->
+                    <div class="col text-end">
+                      <span class="team-txt
+                        {% if match.is_finished and match.score1_real > match.score2_real %}team-winner{% endif %}">
+                        {{ match.team1 }}
+                      </span>
+                    </div>
+
+                    <!-- Marcador / VS -->
+                    <div class="col-auto px-3 text-center" style="min-width:80px">
+                      {% if match.is_finished %}
+                        <span class="fixture-score">{{ match.score1_real }} – {{ match.score2_real }}</span>
+                      {% elif now >= match.match_datetime %}
+                        <span class="fixture-live">EN VIVO</span>
+                      {% else %}
+                        <span class="fixture-vs">vs</span>
+                      {% endif %}
+                    </div>
+
+                    <!-- Equipo 2 -->
+                    <div class="col text-start">
+                      <span class="team-txt
+                        {% if match.is_finished and match.score2_real > match.score1_real %}team-winner{% endif %}">
+                        {{ match.team2 }}
+                      </span>
+                    </div>
+
+                    <!-- Predicción / acción -->
+                    <div class="col-auto ms-3 text-end" style="min-width:120px">
+                      {% if match.is_finished %}
+                        {% if pred %}
+                          {% if pred.points_earned == 3 %}
+                            <span class="pts-badge pts-exact">🏆 +3</span>
+                          {% elif pred.points_earned == 1 %}
+                            <span class="pts-badge pts-winner">⚽ +1</span>
+                          {% else %}
+                            <span class="pts-badge pts-miss">❌ 0</span>
+                          {% endif %}
+                          <div class="pred-label">{{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}</div>
+                        {% else %}
+                          <span class="text-secondary" style="font-size:.75rem">sin pred.</span>
+                        {% endif %}
+                      {% elif match.is_open %}
+                        {% if user %}
+                          {% if pred %}
+                            <a href="/predict/{{ match.id }}" class="btn btn-outline-success btn-xs">
+                              ✓ {{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}
+                            </a>
+                          {% else %}
+                            <a href="/predict/{{ match.id }}" class="btn btn-primary btn-xs">
+                              + Predecir
+                            </a>
+                          {% endif %}
+                        {% else %}
+                          <a href="/join" class="btn btn-outline-light btn-xs">Unirse</a>
+                        {% endif %}
+                      {% else %}
+                        <span class="text-secondary" style="font-size:.75rem">cerrado</span>
+                      {% endif %}
+                    </div>
+
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card">
+        <div class="card-body text-center py-5 text-secondary">
+          <i class="bi bi-calendar-x" style="font-size:2rem"></i>
+          <p class="mt-2 mb-1">No hay partidos cargados.</p>
+          <small>Ejecutá <code>python seed_matches.py</code> y <code>python add_knockout.py</code></small>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Sidebar ───────────────────────────────────────────────────────────── -->
+  <div class="col-lg-4">
+
+    <!-- Leaderboard -->
+    <div class="card shadow mb-3">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-trophy-fill text-warning"></i> Tabla de posiciones</h6>
+      </div>
+      <div class="card-body p-0">
+        {% if leaderboard %}
+          <ul class="list-group list-group-flush">
+            {% for u in leaderboard %}
+              <li class="list-group-item d-flex align-items-center">
+                <span class="leaderboard-pos me-2
+                  {% if loop.index == 1 %}gold{% elif loop.index == 2 %}silver{% elif loop.index == 3 %}bronze{% endif %}">
+                  {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+                </span>
+                <span class="flex-grow-1 small fw-bold" style="color:#1e293b;">
+                  {{ u.name }}
+                  {% if user and u.id == user.id %}<span style="color:#3949ab;">(vos)</span>{% endif %}
+                </span>
+                <span class="badge bg-warning text-dark">{{ u.total_points }} pts</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <div class="text-center py-2">
+            <a href="/leaderboard" class="btn btn-sm btn-outline-primary">Ver tabla completa</a>
+          </div>
+        {% else %}
+          <div class="text-center py-3 text-secondary small">
+            Aún no hay participantes.<br>
+            <a href="/join">¡Sumate!</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Sistema de puntos -->
+    <div class="card shadow mb-3">
+      <div class="card-body py-3">
+        <h6 class="mb-2"><i class="bi bi-star"></i> Sistema de puntos</h6>
+        <div class="d-flex align-items-center mb-1">
+          <span class="pts-badge pts-exact me-2">🏆 3</span>
+          <small style="color:#1e293b; font-weight:600;">Marcador exacto</small>
+        </div>
+        <div class="d-flex align-items-center mb-1">
+          <span class="pts-badge pts-winner me-2">⚽ 1</span>
+          <small style="color:#1e293b; font-weight:600;">Ganador correcto</small>
+        </div>
+        <div class="d-flex align-items-center">
+          <span class="pts-badge pts-miss me-2">❌ 0</span>
+          <small style="color:#1e293b; font-weight:600;">Resultado incorrecto</small>
+        </div>
+        <hr style="border-color:#e2e8f0;" class="my-2">
+        <small style="color:#3949ab; font-weight:600;">Predicciones se cierran cuando empieza el partido.</small>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="card shadow">
+      <div class="card-body py-3">
+        <h6 class="mb-2"><i class="bi bi-bar-chart"></i> Fixture</h6>
+        <div class="row text-center g-2">
+          <div class="col-4">
+            <div style="font-size:1.4rem; font-weight:800; color:#3949ab;">{{ total_matches }}</div>
+            <small style="color:#1e293b; font-weight:600;">Total</small>
+          </div>
+          <div class="col-4">
+            <div style="font-size:1.4rem; font-weight:800;" class="pts-exact">{{ finished_count }}</div>
+            <small style="color:#1e293b; font-weight:600;">Jugados</small>
+          </div>
+          <div class="col-4">
+            <div style="font-size:1.4rem; font-weight:800;" class="pts-winner">{{ open_count }}</div>
+            <small style="color:#1e293b; font-weight:600;">Abiertos</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+  /* ── Fixture styles ──────────────────────────── */
+  .date-pill {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 3px 10px;
+    text-align: center;
+    min-width: 52px;
+    display: inline-block;
+  }
+  .day-num { display: block; font-size: 1.1rem; font-weight: 800; line-height: 1; color: #1e293b; }
+  .day-month { display: block; font-size: .65rem; color: #3949ab; letter-spacing: 1px; font-weight: 700; }
+  .fixture-card { border-radius: 10px; overflow: hidden; }
+  .fixture-row { border-color: #e2e8f0 !important; transition: background .15s; }
+  .fixture-row:hover { background: #f0f4ff; }
+  .fixture-row.finished { opacity: 1; background: #fafbff; }
+  .stage-chip {
+    display: inline-block;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  /* Colores por fase — letras negras */
+  .stage-grupo-a,.stage-grupo-b,.stage-grupo-c,.stage-grupo-d,
+  .stage-grupo-e,.stage-grupo-f,.stage-grupo-g,.stage-grupo-h,
+  .stage-grupo-i,.stage-grupo-j,.stage-grupo-k,.stage-grupo-l
+    { background:#bfdbfe; color:#1e293b; }
+  .stage-dieciseisavos    { background:#bbf7d0; color:#1e293b; }
+  .stage-octavos          { background:#fde68a; color:#1e293b; }
+  .stage-cuartos-de-final { background:#fed7aa; color:#1e293b; }
+  .stage-semifinales      { background:#fca5a5; color:#1e293b; }
+  .stage-tercer-puesto    { background:#d8b4fe; color:#1e293b; }
+  .stage-final            { background:#f59e0b; color:#1e293b; border:1px solid #d97706; font-weight:900; }
+
+  .match-time { font-size: .7rem; color: #475569; margin-top: 1px; font-weight: 600; }
+  .team-txt { font-size: .9rem; font-weight: 800; color: #1e293b !important; }
+  .team-winner { font-weight: 900; color: #1e3a8a !important; }
+  .fixture-score { font-size: 1.15rem; font-weight: 800; letter-spacing: 2px; color: #1e293b; }
+  .fixture-vs { font-size: .8rem; color: #64748b; letter-spacing: 1px; font-weight: 600; }
+  .fixture-live { font-size: .75rem; font-weight: 700; color: #dc2626;
+    animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  .pts-badge {
+    display: inline-block; border-radius: 5px;
+    padding: 1px 8px; font-size: .75rem; font-weight: 700;
+  }
+  .pts-exact  { background:#dcfce7; color:#166534; }
+  .pts-winner { background:#fef3c7; color:#92400e; }
+  .pts-miss   { background:#fee2e2; color:#991b1b; }
+  .pred-label { font-size: .7rem; color: #475569; font-weight: 600; }
+
+  .btn-xs { padding: 2px 8px; font-size: .75rem; border-radius: 5px; white-space: nowrap; }
+
+  /* Sidebar stats numbers */
+  .stat-num { font-size: 1.4rem; font-weight: 800; }
+
+  /* Filtros */
+  .filter-btn.active { opacity: 1; }
+  .filter-btn:not(.active) { opacity: .8; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const allRows      = () => document.querySelectorAll('.fixture-row');
+  const allBlocks    = () => document.querySelectorAll('.date-block');
+  const filterBtns   = document.querySelectorAll('.filter-btn');
+  const subfilterDiv = document.getElementById('subfilters');
+  const subBtns      = document.querySelectorAll('.subfilter-btn');
+
+  let activeFilter    = 'todos';
+  let activeSubfilter = null;
+
+  function applyFilter() {
+    allRows().forEach(row => {
+      const stage     = row.dataset.stage;
+      const stageSlug = row.dataset.stageSlug;
+      const isGroup   = row.dataset.isGroup === 'true';
+      let visible = false;
+
+      if (activeFilter === 'todos') {
+        visible = true;
+      } else if (activeFilter === 'grupos') {
+        if (activeSubfilter) {
+          visible = (stage === activeSubfilter);
+        } else {
+          visible = isGroup;
+        }
+      } else {
+        visible = (stageSlug === activeFilter);
+      }
+
+      row.style.display = visible ? '' : 'none';
+    });
+
+    // Ocultar date-blocks donde todos los rows están ocultos
+    allBlocks().forEach(block => {
+      const rows   = block.querySelectorAll('.fixture-row');
+      const anyVis = Array.from(rows).some(r => r.style.display !== 'none');
+      block.style.display = anyVis ? '' : 'none';
+    });
+  }
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active', 'btn-primary'));
+      filterBtns.forEach(b => b.classList.add('btn-outline-secondary'));
+      btn.classList.add('active', 'btn-primary');
+      btn.classList.remove('btn-outline-secondary');
+
+      activeFilter    = btn.dataset.filter;
+      activeSubfilter = null;
+      subBtns.forEach(b => b.classList.remove('active', 'btn-info'));
+      subBtns.forEach(b => b.classList.add('btn-outline-info'));
+
+      // Mostrar/ocultar sub-filtros de grupo
+      if (activeFilter === 'grupos') {
+        subfilterDiv.style.removeProperty('display');
+        subfilterDiv.style.display = 'flex';
+      } else {
+        subfilterDiv.style.display = 'none';
+      }
+
+      applyFilter();
+    });
+  });
+
+  subBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      subBtns.forEach(b => b.classList.remove('active', 'btn-info'));
+      subBtns.forEach(b => b.classList.add('btn-outline-info'));
+      if (activeSubfilter === btn.dataset.subfilter) {
+        // deselect → mostrar todos los grupos
+        activeSubfilter = null;
+      } else {
+        btn.classList.add('active', 'btn-info');
+        btn.classList.remove('btn-outline-info');
+        activeSubfilter = btn.dataset.subfilter;
+      }
+      applyFilter();
+    });
+  });
+})();
+</script>
+{% endblock %}
