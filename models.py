@@ -72,18 +72,26 @@ class Prediction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     match_id = db.Column(db.Integer, db.ForeignKey("matches.id"), nullable=False)
-    predicted_score1 = db.Column(db.Integer, nullable=False)
-    predicted_score2 = db.Column(db.Integer, nullable=False)
+    # '1' = gana equipo 1, '2' = gana equipo 2, 'draw' = empate
+    predicted_outcome = db.Column(db.String(5), nullable=False, default='draw')
     points_earned = db.Column(db.Integer, nullable=True)
 
     __table_args__ = (db.UniqueConstraint("user_id", "match_id"),)
 
     @property
-    def predicted_winner(self):
-        if self.predicted_score1 > self.predicted_score2:
-            return self.match.team1
-        if self.predicted_score2 > self.predicted_score1:
-            return self.match.team2
+    def outcome_label(self):
+        if self.predicted_outcome == '1':
+            return f"Gana {self.match.team1}"
+        if self.predicted_outcome == '2':
+            return f"Gana {self.match.team2}"
+        return "Empate"
+
+    @property
+    def outcome_short(self):
+        if self.predicted_outcome == '1':
+            return self.match.team1.split(' ')[-1]
+        if self.predicted_outcome == '2':
+            return self.match.team2.split(' ')[-1]
         return "Empate"
 
 

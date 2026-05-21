@@ -8,60 +8,76 @@
 
     <div class="card shadow">
       <div class="card-header text-center py-3">
-        <small class="text-secondary">{{ match.stage }} &nbsp;|&nbsp; {{ match.match_datetime.strftime('%d/%m/%Y %H:%M') }} UTC</small>
-        <h5 class="mt-1 mb-0">{{ match.team1 }} vs {{ match.team2 }}</h5>
+        <small style="color:#475569;font-weight:600;">
+          {{ match.stage }} &nbsp;|&nbsp; {{ match.match_datetime.strftime('%d/%m/%Y %H:%M') }} UTC
+        </small>
+        <h5 class="mt-1 mb-0" style="color:#1e293b;">{{ match.team1 }} vs {{ match.team2 }}</h5>
       </div>
       <div class="card-body p-4">
-        <p class="text-secondary text-center mb-4">
-          ¿Cómo creés que termina este partido? Ingresá tu predicción de marcador.
+
+        <p style="color:#475569;font-weight:600;text-align:center;" class="mb-4">
+          ¿Quién ganará este partido?
         </p>
 
-        <form method="POST">
-          <div class="row align-items-center g-3 text-center mb-4">
-            <div class="col-5">
-              <label class="form-label fw-bold">{{ match.team1 }}</label>
-              <input
-                type="number"
-                class="form-control form-control-lg text-center"
-                name="score1"
-                min="0"
-                max="20"
-                value="{{ existing.predicted_score1 if existing else '' }}"
-                placeholder="0"
-                required
-                style="font-size: 2rem; font-weight: 800;"
-              >
+        <form method="POST" id="pred-form">
+          <div class="row g-3 mb-4">
+
+            <!-- Gana equipo 1 -->
+            <div class="col-4">
+              <label class="outcome-btn w-100 text-center p-3 rounded {{ 'selected' if existing and existing.predicted_outcome == '1' }}"
+                     style="cursor:pointer;border:2px solid {{ '#3949ab' if existing and existing.predicted_outcome == '1' else '#e2e8f0' }};
+                            background:{{ '#eef2ff' if existing and existing.predicted_outcome == '1' else '#fff' }};
+                            transition:all .15s;display:block;">
+                <input type="radio" name="outcome" value="1"
+                       {{ 'checked' if existing and existing.predicted_outcome == '1' }}
+                       style="display:none;" required>
+                <div style="font-size:1.4rem;">🏆</div>
+                <div style="font-weight:800;font-size:.85rem;color:#1e293b;margin-top:4px;">
+                  {{ match.team1 }}
+                </div>
+                <div style="font-size:.72rem;color:#475569;font-weight:600;">Gana</div>
+              </label>
             </div>
-            <div class="col-2 pt-4">
-              <span style="font-size: 1.5rem; color: #546e7a;">–</span>
+
+            <!-- Empate -->
+            <div class="col-4">
+              <label class="outcome-btn w-100 text-center p-3 rounded {{ 'selected' if existing and existing.predicted_outcome == 'draw' }}"
+                     style="cursor:pointer;border:2px solid {{ '#3949ab' if existing and existing.predicted_outcome == 'draw' else '#e2e8f0' }};
+                            background:{{ '#eef2ff' if existing and existing.predicted_outcome == 'draw' else '#fff' }};
+                            transition:all .15s;display:block;">
+                <input type="radio" name="outcome" value="draw"
+                       {{ 'checked' if existing and existing.predicted_outcome == 'draw' }}
+                       style="display:none;">
+                <div style="font-size:1.4rem;">🤝</div>
+                <div style="font-weight:800;font-size:.85rem;color:#1e293b;margin-top:4px;">Empate</div>
+                <div style="font-size:.72rem;color:#475569;font-weight:600;">&nbsp;</div>
+              </label>
             </div>
-            <div class="col-5">
-              <label class="form-label fw-bold">{{ match.team2 }}</label>
-              <input
-                type="number"
-                class="form-control form-control-lg text-center"
-                name="score2"
-                min="0"
-                max="20"
-                value="{{ existing.predicted_score2 if existing else '' }}"
-                placeholder="0"
-                required
-                style="font-size: 2rem; font-weight: 800;"
-              >
+
+            <!-- Gana equipo 2 -->
+            <div class="col-4">
+              <label class="outcome-btn w-100 text-center p-3 rounded {{ 'selected' if existing and existing.predicted_outcome == '2' }}"
+                     style="cursor:pointer;border:2px solid {{ '#3949ab' if existing and existing.predicted_outcome == '2' else '#e2e8f0' }};
+                            background:{{ '#eef2ff' if existing and existing.predicted_outcome == '2' else '#fff' }};
+                            transition:all .15s;display:block;">
+                <input type="radio" name="outcome" value="2"
+                       {{ 'checked' if existing and existing.predicted_outcome == '2' }}
+                       style="display:none;">
+                <div style="font-size:1.4rem;">🏆</div>
+                <div style="font-weight:800;font-size:.85rem;color:#1e293b;margin-top:4px;">
+                  {{ match.team2 }}
+                </div>
+                <div style="font-size:.72rem;color:#475569;font-weight:600;">Gana</div>
+              </label>
             </div>
+
           </div>
 
-          <div class="card mb-3" style="background:#0a0e1a; border-color:#1e2d4a;">
-            <div class="card-body py-2 px-3">
-              <small class="text-secondary">
-                <span class="pts-exact">🏆 3 pts</span> exacto &nbsp;|&nbsp;
-                <span class="pts-winner">⚽ 1 pt</span> resultado correcto &nbsp;|&nbsp;
-                <span class="pts-winner">🔢 1 pt</span> un número acertado
-              </small>
-            </div>
+          <div class="text-center mb-3" style="font-size:.82rem;color:#475569;font-weight:600;">
+            ⚽ <strong>1 punto</strong> si acertás el resultado &nbsp;|&nbsp; ❌ <strong>0</strong> si no
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100">
+          <button type="submit" class="btn btn-primary btn-lg w-100" id="submit-btn" disabled>
             <i class="bi bi-check-circle"></i>
             {{ "Actualizar predicción" if existing else "Guardar predicción" }}
           </button>
@@ -69,13 +85,34 @@
 
         {% if existing %}
           <div class="text-center mt-3">
-            <small class="text-secondary">
-              Predicción actual: <strong>{{ existing.predicted_score1 }} – {{ existing.predicted_score2 }}</strong>
+            <small style="color:#475569;font-weight:600;">
+              Predicción actual: <strong>{{ existing.outcome_label }}</strong>
             </small>
           </div>
         {% endif %}
+
       </div>
     </div>
   </div>
 </div>
+
+<script>
+const labels = document.querySelectorAll('.outcome-btn');
+const submitBtn = document.getElementById('submit-btn');
+
+// Habilitar submit si ya hay predicción existente
+{% if existing %}submitBtn.disabled = false;{% endif %}
+
+labels.forEach(label => {
+  label.addEventListener('click', () => {
+    labels.forEach(l => {
+      l.style.border = '2px solid #e2e8f0';
+      l.style.background = '#fff';
+    });
+    label.style.border = '2px solid #3949ab';
+    label.style.background = '#eef2ff';
+    submitBtn.disabled = false;
+  });
+});
+</script>
 {% endblock %}

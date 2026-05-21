@@ -114,7 +114,7 @@
                           {% else %}
                             <span class="pts-badge pts-miss">❌ 0</span>
                           {% endif %}
-                          <div class="pred-label">{{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}</div>
+                          <div class="pred-label">{{ pred.outcome_short }}</div>
                         {% else %}
                           <span class="text-secondary" style="font-size:.75rem">sin pred.</span>
                         {% endif %}
@@ -122,7 +122,7 @@
                         {% if user %}
                           {% if pred %}
                             <a href="/predict/{{ match.id }}" class="btn btn-outline-success btn-xs">
-                              ✓ {{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}
+                              ✓ {{ pred.outcome_short }}
                             </a>
                           {% else %}
                             <a href="/predict/{{ match.id }}" class="btn btn-primary btn-xs">
@@ -198,20 +198,12 @@
       <div class="card-body py-3">
         <h6 class="mb-2"><i class="bi bi-star"></i> Sistema de puntos</h6>
         <div class="d-flex align-items-center mb-1">
-          <span class="pts-badge pts-exact me-2">🏆 3</span>
-          <small style="color:#1e293b; font-weight:600;">Marcador exacto</small>
-        </div>
-        <div class="d-flex align-items-center mb-1">
           <span class="pts-badge pts-winner me-2">⚽ 1</span>
-          <small style="color:#1e293b; font-weight:600;">Resultado correcto (sin exacto)</small>
-        </div>
-        <div class="d-flex align-items-center mb-1">
-          <span class="pts-badge pts-winner me-2">🔢 1</span>
-          <small style="color:#1e293b; font-weight:600;">Un número acertado</small>
+          <small style="color:#1e293b; font-weight:600;">Resultado correcto (gana o empata)</small>
         </div>
         <div class="d-flex align-items-center">
           <span class="pts-badge pts-miss me-2">❌ 0</span>
-          <small style="color:#1e293b; font-weight:600;">Nada acertado</small>
+          <small style="color:#1e293b; font-weight:600;">Resultado incorrecto</small>
         </div>
         <hr style="border-color:#e2e8f0;" class="my-2">
         <small style="color:#3949ab; font-weight:600;">Predicciones se cierran cuando empieza el partido.</small>

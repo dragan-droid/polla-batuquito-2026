@@ -177,7 +177,7 @@
                 <!-- Centro: predicción + resultado real -->
                 <div class="center-cell">
                   {% if pred %}
-                    <div class="pred-score">{{ pred.predicted_score1 }} – {{ pred.predicted_score2 }}</div>
+                    <div class="pred-score" style="font-size:.82rem;letter-spacing:0;">{{ pred.outcome_label }}</div>
                   {% else %}
                     <span class="no-pred">sin pred.</span>
                   {% endif %}

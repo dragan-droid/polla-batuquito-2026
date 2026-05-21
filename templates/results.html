@@ -39,7 +39,7 @@
         {% if pred %}
           <div class="text-center mt-2 pt-2" style="border-top: 1px solid #1e2d4a;">
             <small class="text-secondary">Tu predicción: </small>
-            <strong>{{ pred.predicted_score1 }} – {{ pred.predicted_score2 }}</strong>
+            <strong>{{ pred.outcome_label }}</strong>
             &nbsp;
             {% if pred.points_earned == 3 %}
               <span class="pts-exact">🏆 +3 pts (exacto)</span>

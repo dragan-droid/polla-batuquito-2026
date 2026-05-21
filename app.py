@@ -134,28 +134,23 @@ def predict(match_id):
     existing = Prediction.query.filter_by(user_id=user.id, match_id=match_id).first()
 
     if request.method == "POST":
-        try:
-            s1 = int(request.form["score1"])
-            s2 = int(request.form["score2"])
-            if s1 < 0 or s2 < 0:
-                raise ValueError
-        except (ValueError, KeyError):
-            flash("Marcador inválido. Ingresá números mayores o iguales a 0.", "danger")
+        outcome = request.form.get("outcome", "")
+        if outcome not in ("1", "2", "draw"):
+            flash("Seleccioná un resultado válido.", "danger")
             return redirect(url_for("predict", match_id=match_id))
 
         if existing:
-            existing.predicted_score1 = s1
-            existing.predicted_score2 = s2
+            existing.predicted_outcome = outcome
             existing.points_earned = None
         else:
             db.session.add(Prediction(
                 user_id=user.id,
                 match_id=match_id,
-                predicted_score1=s1,
-                predicted_score2=s2,
+                predicted_outcome=outcome,
             ))
         db.session.commit()
-        flash(f"✅ Predicción guardada: {match.team1} {s1} – {s2} {match.team2}", "success")
+        label = {"1": f"Gana {match.team1}", "2": f"Gana {match.team2}", "draw": "Empate"}[outcome]
+        flash(f"✅ Predicción guardada: {label}", "success")
         return redirect(url_for("index"))
 
     return render_template("predict.html", user=user, match=match, existing=existing)
@@ -575,9 +570,7 @@ def admin_match(match_id):
             match.score2_real = s2
             match.is_finished = True
             for pred in match.predictions:
-                pred.points_earned = calculate_points(
-                    pred.predicted_score1, pred.predicted_score2, s1, s2
-                )
+                pred.points_earned = calculate_points(pred.predicted_outcome, s1, s2)
             db.session.commit()
             flash(
                 f"✅ Resultado cargado: {match.team1} {s1} – {s2} {match.team2}. "

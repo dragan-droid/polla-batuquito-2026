@@ -298,15 +298,13 @@
       <span class="bmatch-date">{{ match.match_datetime.strftime('%d/%m') }}</span>
       {% if pred and not tbd %}
         {% if match.is_finished %}
-          {% if pred.points_earned == 3 %}
-            <span class="bpred-badge bpred-exact">🏆 +3</span>
-          {% elif pred.points_earned == 1 %}
+          {% if pred.points_earned == 1 %}
             <span class="bpred-badge bpred-winner">⚽ +1</span>
           {% else %}
             <span class="bpred-badge bpred-miss">❌ 0</span>
           {% endif %}
         {% else %}
-          <span class="bpred-badge bpred-open">{{ pred.predicted_score1 }}–{{ pred.predicted_score2 }}</span>
+          <span class="bpred-badge bpred-open">{{ pred.outcome_short }}</span>
         {% endif %}
       {% elif not tbd and match.is_open %}
         <a href="/predict/{{ match.id }}" style="font-size:.63rem;color:#3949ab;font-weight:700;">+ predecir</a>
