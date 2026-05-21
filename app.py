@@ -353,7 +353,6 @@ def special_groups():
         flash("Las apuestas especiales ya están cerradas.", "warning")
         return redirect(url_for("special"))
 
-    # Asegurar que existe el SpecialBet del usuario
     bet = SpecialBet.query.filter_by(user_id=user.id).first()
     if not bet:
         bet = SpecialBet(user_id=user.id)
@@ -362,43 +361,54 @@ def special_groups():
 
     groups_with_teams = _get_groups_with_teams()
     errors = []
+    total_selected = 0
+    selections = {}
 
     for group_name in groups_with_teams:
         selected = request.form.getlist(f"gq_{group_name}")
-        if len(selected) != 2:
-            errors.append(f"{group_name}: seleccioná exactamente 2 equipos (seleccionaste {len(selected)}).")
+        selections[group_name] = selected
+        total_selected += len(selected)
+        if len(selected) < 2:
+            errors.append(f"{group_name}: seleccioná al menos 2 equipos.")
+        elif len(selected) > 3:
+            errors.append(f"{group_name}: máximo 3 equipos por grupo.")
+
+    if total_selected > 32:
+        errors.append(f"Seleccionaste {total_selected} equipos en total. El máximo es 32 (24 directos + 8 terceros).")
 
     if errors:
         for e in errors:
             flash(e, "danger")
         return redirect(url_for("special"))
 
-    # Guardar o actualizar las apuestas de cada grupo
     existing_map = {gqb.group_name: gqb for gqb in bet.group_qualifier_bets}
     gq_results = {r.group_name: r for r in GroupQualifierResult.query.all()}
 
-    for group_name, _ in groups_with_teams.items():
-        selected = request.form.getlist(f"gq_{group_name}")
+    for group_name, selected in selections.items():
+        t1 = selected[0] if len(selected) > 0 else None
+        t2 = selected[1] if len(selected) > 1 else None
+        t3 = selected[2] if len(selected) > 2 else None
+
         if group_name in existing_map:
             gqb = existing_map[group_name]
-            gqb.team1, gqb.team2 = selected[0], selected[1]
+            gqb.team1, gqb.team2, gqb.team3 = t1, t2, t3
             gqb.points = None
         else:
             gqb = GroupQualifierBet(
                 special_bet_id=bet.id,
                 group_name=group_name,
-                team1=selected[0], team2=selected[1],
+                team1=t1, team2=t2, team3=t3,
             )
             db.session.add(gqb)
             db.session.flush()
 
-        # Recalcular si ya hay resultado para este grupo
         if group_name in gq_results:
             r = gq_results[group_name]
-            gqb.points = calculate_group_qualifier_points(gqb.team1, gqb.team2, r.team1, r.team2)
+            gqb.points = calculate_group_qualifier_points(gqb.teams_set, r.teams_set)
 
     db.session.commit()
-    flash("✅ Clasificados por grupo guardados.", "success")
+    terceros = total_selected - 24
+    flash(f"✅ Clasificados guardados. {terceros}/8 terceros seleccionados.", "success")
     return redirect(url_for("special"))
 
 
@@ -607,12 +617,14 @@ def admin_special_groups():
     for group_name in groups_with_teams:
         t1 = request.form.get(f"real_{group_name}_1", "").strip() or None
         t2 = request.form.get(f"real_{group_name}_2", "").strip() or None
+        t3 = request.form.get(f"real_{group_name}_3", "").strip() or None
 
         if group_name in existing_map:
             existing_map[group_name].team1 = t1
             existing_map[group_name].team2 = t2
+            existing_map[group_name].team3 = t3
         else:
-            db.session.add(GroupQualifierResult(group_name=group_name, team1=t1, team2=t2))
+            db.session.add(GroupQualifierResult(group_name=group_name, team1=t1, team2=t2, team3=t3))
 
     db.session.commit()
 
@@ -622,7 +634,7 @@ def admin_special_groups():
     for gqb in GroupQualifierBet.query.all():
         r = gq_results.get(gqb.group_name)
         if r and r.team1:
-            gqb.points = calculate_group_qualifier_points(gqb.team1, gqb.team2, r.team1, r.team2)
+            gqb.points = calculate_group_qualifier_points(gqb.teams_set, r.teams_set)
             count += 1
         else:
             gqb.points = None

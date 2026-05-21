@@ -128,15 +128,39 @@
        SECCIÓN 2: CLASIFICADOS POR GRUPO
   ═══════════════════════════════════════════════════ -->
   <div class="card shadow mb-4">
-    <div class="card-header d-flex align-items-center">
+    <div class="card-header d-flex align-items-center flex-wrap gap-2">
       <h6 class="mb-0" style="color:#1e293b;">⚽ Clasificados por grupo</h6>
-      <span class="badge ms-auto" style="background:#bfdbfe;color:#1e40af;font-weight:800;">1 pt por equipo acertado</span>
+      <div class="ms-auto d-flex gap-2 align-items-center flex-wrap">
+        <span class="badge" style="background:#bfdbfe;color:#1e40af;font-weight:800;">1 pt por equipo acertado</span>
+        <span class="badge" style="background:#fef3c7;color:#92400e;font-weight:800;">máx 32 clasificados</span>
+      </div>
     </div>
     <div class="card-body">
-      <p style="color:#475569;font-weight:600;font-size:.88rem;" class="mb-3">
-        Seleccioná los <strong>2 equipos</strong> que clasifican de cada grupo.
-        Máximo {{ groups_with_teams|length * 2 }} puntos ({{ groups_with_teams|length }} grupos × 2 equipos).
-      </p>
+
+      <!-- Instrucciones y contador -->
+      <div class="p-3 rounded mb-3" style="background:#f8faff;border:1px solid #e2e8f0;">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-8">
+            <p style="color:#1e293b;font-weight:600;font-size:.88rem;margin:0;">
+              Seleccioná <strong>exactamente 2 por grupo</strong> (los que clasifican directo) y
+              opcionalmente <strong>hasta 8 terceros</strong> de cualquier grupo.
+              Total máximo: <strong>32 equipos</strong>.
+            </p>
+          </div>
+          <div class="col-md-4 text-center">
+            <div style="font-size:1.5rem;font-weight:900;color:#3949ab;" id="total-count">0</div>
+            <div style="font-size:.75rem;font-weight:700;color:#475569;">equipos seleccionados</div>
+            <div style="font-size:.8rem;font-weight:700;margin-top:4px;">
+              Terceros: <span id="terceros-count" style="color:#d97706;">0</span>/8
+            </div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <div class="progress" style="height:8px;">
+            <div id="progress-bar" class="progress-bar bg-primary" style="width:0%;transition:width .3s;"></div>
+          </div>
+        </div>
+      </div>
 
       <form method="POST" action="/special/groups" id="groups-form">
         <div class="row g-3">
@@ -147,13 +171,10 @@
               <div class="group-card">
                 <div class="group-card-header d-flex align-items-center">
                   {{ group_name }}
-                  {% if gq_bet %}
-                    {% if gq_real and gq_real.team1 %}
-                      {% set pts = gq_bet | select_in_set(gq_real) if gq_real else 0 %}
-                      {# Calculado en Python, mostrar desde existing_gq_points si lo tenemos #}
-                    {% endif %}
-                    <span class="ms-auto" style="font-size:.65rem;font-weight:600;color:#3949ab;">{{ gq_bet|length }} sel.</span>
-                  {% endif %}
+                  <span class="ms-auto group-sel-count" data-group="{{ group_name }}"
+                    style="font-size:.65rem;font-weight:700;color:#3949ab;">
+                    {{ gq_bet|length }} sel.
+                  </span>
                 </div>
                 <div>
                   {% for team in teams_in_group %}
@@ -166,11 +187,13 @@
                       {{ 'wrong' if is_selected and result_known and not is_correct }}
                       {{ 'disabled' if not is_open }}">
                       <input type="checkbox"
+                        class="team-checkbox"
+                        data-group="{{ group_name }}"
                         name="gq_{{ group_name }}"
                         value="{{ team }}"
                         {{ 'checked' if is_selected }}
                         {{ 'disabled' if not is_open }}
-                        onchange="limitChecks(this, 'gq_{{ group_name }}')">
+                        onchange="handleCheck(this)">
                       {{ team }}
                       {% if result_known and is_correct %}
                         <span class="group-pts-badge pts-ok ms-auto">✓</span>
@@ -186,12 +209,17 @@
         </div>
 
         {% if is_open %}
-          <button type="submit" class="btn btn-primary mt-4" id="submit-groups">
-            <i class="bi bi-check-circle"></i> Guardar clasificados por grupo
-          </button>
-          <span id="groups-warning" class="ms-3" style="color:#dc2626;font-weight:700;font-size:.85rem;display:none;">
-            ⚠ Seleccioná exactamente 2 por grupo antes de guardar.
-          </span>
+          <div class="mt-4 d-flex align-items-center gap-3 flex-wrap">
+            <button type="submit" class="btn btn-primary" id="submit-groups">
+              <i class="bi bi-check-circle"></i> Guardar clasificados
+            </button>
+            <span id="groups-warning" style="color:#dc2626;font-weight:700;font-size:.85rem;display:none;">
+              ⚠ Cada grupo necesita mínimo 2 seleccionados.
+            </span>
+            <span id="limit-warning" style="color:#dc2626;font-weight:700;font-size:.85rem;display:none;">
+              ⚠ Máximo 32 equipos en total (ya tenés 8 terceros).
+            </span>
+          </div>
         {% endif %}
       </form>
     </div>
@@ -237,26 +265,83 @@
 
 {% block scripts %}
 <script>
-function limitChecks(checkbox, groupName) {
-  const checks = document.querySelectorAll(`input[name="${CSS.escape(groupName)}"]`);
-  const checked = Array.from(checks).filter(c => c.checked);
-  if (checked.length > 2) {
-    checkbox.checked = false;
-  }
-  // Actualizar clase visual
-  checks.forEach(c => {
-    const label = c.closest('.team-check-label');
-    label.classList.toggle('selected', c.checked);
-  });
+const GROUPS = {{ groups_with_teams.keys() | list | tojson }};
+const MAX_TOTAL = 32;
+const NUM_GROUPS = GROUPS.length;  // 12
+
+function getTotalChecked() {
+  return document.querySelectorAll('.team-checkbox:checked').length;
 }
+
+function getGroupChecked(groupName) {
+  return document.querySelectorAll(`.team-checkbox[data-group="${CSS.escape(groupName)}"]:checked`).length;
+}
+
+function updateCounter() {
+  const total = getTotalChecked();
+  const terceros = total - NUM_GROUPS * 2;  // extra por encima de 2 obligatorios
+  const tercerosClamped = Math.max(0, terceros);
+
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('terceros-count').textContent = tercerosClamped;
+  const pct = Math.min(100, (total / MAX_TOTAL) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-bar').className =
+    'progress-bar ' + (total >= MAX_TOTAL ? 'bg-danger' : total >= 28 ? 'bg-warning' : 'bg-primary');
+
+  // Actualizar contadores por grupo
+  GROUPS.forEach(g => {
+    const el = document.querySelector(`.group-sel-count[data-group="${CSS.escape(g)}"]`);
+    if (el) el.textContent = getGroupChecked(g) + ' sel.';
+  });
+
+  // Bloquear checkboxes cuando se alcanza máximo total o máximo 3 por grupo
+  document.querySelectorAll('.team-checkbox:not(:checked):not([disabled])').forEach(cb => {
+    const g = cb.dataset.group;
+    const groupCount = getGroupChecked(g);
+    cb.disabled = (total >= MAX_TOTAL) || (groupCount >= 3);
+  });
+
+  // Re-habilitar si bajó el total
+  if (total < MAX_TOTAL) {
+    document.querySelectorAll('.team-checkbox:not(:checked)').forEach(cb => {
+      if (cb.hasAttribute('disabled') && !cb.dataset.permanentDisabled) {
+        const g = cb.dataset.group;
+        if (getGroupChecked(g) < 3) cb.disabled = false;
+      }
+    });
+  }
+
+  // Mostrar/ocultar warning de límite
+  const lw = document.getElementById('limit-warning');
+  if (lw) lw.style.display = tercerosClamped >= 8 ? 'inline' : 'none';
+}
+
+function handleCheck(checkbox) {
+  const g = checkbox.dataset.group;
+  const groupCount = getGroupChecked(g);
+
+  // Si ya hay 3 en este grupo y se quiere agregar más, revertir
+  if (checkbox.checked && groupCount > 3) {
+    checkbox.checked = false;
+    return;
+  }
+
+  // Actualizar clase visual del label
+  const label = checkbox.closest('.team-check-label');
+  label.classList.toggle('selected', checkbox.checked);
+
+  updateCounter();
+}
+
+// Inicializar contador al cargar
+document.addEventListener('DOMContentLoaded', updateCounter);
 
 // Validar antes de submit
 document.getElementById('groups-form')?.addEventListener('submit', function(e) {
-  const groups = {{ groups_with_teams.keys() | list | tojson }};
   let ok = true;
-  groups.forEach(g => {
-    const checks = document.querySelectorAll(`input[name="gq_${g}"]:checked`);
-    if (checks.length !== 2) ok = false;
+  GROUPS.forEach(g => {
+    if (getGroupChecked(g) < 2) ok = false;
   });
   if (!ok) {
     e.preventDefault();

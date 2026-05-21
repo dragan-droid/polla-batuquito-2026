@@ -64,12 +64,21 @@
                     {% endfor %}
                   </select>
                 </div>
-                <div>
+                <div class="mb-1">
                   <label style="font-size:.72rem;font-weight:700;color:#475569;">2° clasificado</label>
                   <select class="form-select form-select-sm" name="real_{{ group_name }}_2">
                     <option value="">— —</option>
                     {% for team in teams_in_group %}
                       <option value="{{ team }}" {{ 'selected' if gqr and gqr.team2 == team }}>{{ team }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:.72rem;font-weight:700;color:#d97706;">3° (si clasifica)</label>
+                  <select class="form-select form-select-sm" name="real_{{ group_name }}_3">
+                    <option value="">— No clasifica —</option>
+                    {% for team in teams_in_group %}
+                      <option value="{{ team }}" {{ 'selected' if gqr and gqr.team3 == team }}>{{ team }}</option>
                     {% endfor %}
                   </select>
                 </div>

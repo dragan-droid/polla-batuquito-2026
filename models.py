@@ -123,30 +123,36 @@ class SpecialResult(db.Model):
 
 
 class GroupQualifierBet(db.Model):
-    """2 equipos que el usuario predice que clasifican de cada grupo."""
+    """Equipos que el usuario predice que clasifican de cada grupo (2 obligatorios + 1 tercero opcional)."""
     __tablename__ = "group_qualifier_bets"
     id = db.Column(db.Integer, primary_key=True)
     special_bet_id = db.Column(db.Integer, db.ForeignKey("special_bets.id"), nullable=False)
     group_name = db.Column(db.String(15), nullable=False)
     team1 = db.Column(db.String(50), nullable=True)
     team2 = db.Column(db.String(50), nullable=True)
-    points = db.Column(db.Integer, nullable=True)  # 0, 1 o 2
+    team3 = db.Column(db.String(50), nullable=True)  # tercero opcional
+    points = db.Column(db.Integer, nullable=True)  # 0-3
 
     __table_args__ = (db.UniqueConstraint("special_bet_id", "group_name"),)
 
     @property
     def teams_set(self):
-        return {t for t in [self.team1, self.team2] if t}
+        return {t for t in [self.team1, self.team2, self.team3] if t}
+
+    @property
+    def teams_list(self):
+        return [t for t in [self.team1, self.team2, self.team3] if t]
 
 
 class GroupQualifierResult(db.Model):
-    """Los 2 equipos reales que clasificaron de cada grupo."""
+    """Los equipos reales que clasificaron de cada grupo (2 directos + 1 tercero si aplica)."""
     __tablename__ = "group_qualifier_results"
     id = db.Column(db.Integer, primary_key=True)
     group_name = db.Column(db.String(15), unique=True, nullable=False)
     team1 = db.Column(db.String(50), nullable=True)
     team2 = db.Column(db.String(50), nullable=True)
+    team3 = db.Column(db.String(50), nullable=True)  # tercero clasificado (si aplica)
 
     @property
     def teams_set(self):
-        return {t for t in [self.team1, self.team2] if t}
+        return {t for t in [self.team1, self.team2, self.team3] if t}

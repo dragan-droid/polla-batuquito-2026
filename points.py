@@ -32,8 +32,6 @@ def calculate_special_points(bet, result) -> tuple:
     return champion_pts, semi_pts
 
 
-def calculate_group_qualifier_points(bet_team1, bet_team2, real_team1, real_team2) -> int:
-    """1 punto por cada equipo clasificado acertado (máx 2 por grupo)."""
-    real_set = {t for t in [real_team1, real_team2] if t}
-    predicted = {t for t in [bet_team1, bet_team2] if t}
-    return len(predicted & real_set)
+def calculate_group_qualifier_points(bet_teams_set, real_teams_set) -> int:
+    """1 punto por cada equipo clasificado acertado (máx 3 por grupo si hay tercero)."""
+    return len(bet_teams_set & real_teams_set)
