@@ -380,6 +380,40 @@ def special():
         top_scorers=TOP_SCORERS)
 
 
+@app.route("/special/scorer", methods=["POST"])
+def special_scorer():
+    user = current_user()
+    if not user:
+        return redirect(url_for("join"))
+
+    deadline = _special_deadline()
+    if datetime.utcnow() >= deadline:
+        flash("Las apuestas especiales ya están cerradas.", "warning")
+        return redirect(url_for("special"))
+
+    scorer = request.form.get("top_scorer", "").strip() or None
+    if not scorer:
+        flash("Seleccioná un jugador.", "danger")
+        return redirect(url_for("special"))
+
+    bet = SpecialBet.query.filter_by(user_id=user.id).first()
+    if not bet:
+        bet = SpecialBet(user_id=user.id)
+        db.session.add(bet)
+
+    bet.top_scorer = scorer
+    bet.top_scorer_points = None
+    db.session.commit()
+
+    result = SpecialResult.query.get(1)
+    if result and result.top_scorer:
+        bet.top_scorer_points = 20 if scorer == result.top_scorer else 0
+        db.session.commit()
+
+    flash(f"✅ Goleador guardado: {scorer}", "success")
+    return redirect(url_for("special"))
+
+
 @app.route("/special/groups", methods=["POST"])
 def special_groups():
     user = current_user()
