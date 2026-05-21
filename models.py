@@ -17,10 +17,9 @@ class User(db.Model):
         pts = sum(p.points_earned for p in self.predictions if p.points_earned is not None)
         if self.special_bet:
             sb = self.special_bet
-            if sb.champion_points is not None:
-                pts += sb.champion_points
-            if sb.semi_points is not None:
-                pts += sb.semi_points
+            for field in (sb.champion_points, sb.semi_points, sb.top_scorer_points):
+                if field is not None:
+                    pts += field
             for gqb in sb.group_qualifier_bets:
                 if gqb.points is not None:
                     pts += gqb.points
@@ -32,10 +31,9 @@ class User(db.Model):
             return 0
         sb = self.special_bet
         pts = 0
-        if sb.champion_points is not None:
-            pts += sb.champion_points
-        if sb.semi_points is not None:
-            pts += sb.semi_points
+        for field in (sb.champion_points, sb.semi_points, sb.top_scorer_points):
+            if field is not None:
+                pts += field
         for gqb in sb.group_qualifier_bets:
             if gqb.points is not None:
                 pts += gqb.points
@@ -98,8 +96,10 @@ class SpecialBet(db.Model):
     semi2 = db.Column(db.String(50), nullable=True)
     semi3 = db.Column(db.String(50), nullable=True)
     semi4 = db.Column(db.String(50), nullable=True)
+    top_scorer = db.Column(db.String(80), nullable=True)
     champion_points = db.Column(db.Integer, nullable=True)
     semi_points = db.Column(db.Integer, nullable=True)
+    top_scorer_points = db.Column(db.Integer, nullable=True)
     group_qualifier_bets = db.relationship("GroupQualifierBet", backref="special_bet",
                                            lazy=True, cascade="all, delete-orphan")
 
@@ -116,6 +116,7 @@ class SpecialResult(db.Model):
     semi2 = db.Column(db.String(50), nullable=True)
     semi3 = db.Column(db.String(50), nullable=True)
     semi4 = db.Column(db.String(50), nullable=True)
+    top_scorer = db.Column(db.String(80), nullable=True)
 
     @property
     def semis_set(self):

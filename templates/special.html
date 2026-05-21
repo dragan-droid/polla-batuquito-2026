@@ -125,7 +125,82 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════
-       SECCIÓN 2: CLASIFICADOS POR GRUPO
+       SECCIÓN 2: GOLEADOR DEL MUNDIAL
+  ═══════════════════════════════════════════════════ -->
+  <div class="card shadow mb-4">
+    <div class="card-header d-flex align-items-center">
+      <h6 class="mb-0" style="color:#1e293b;">⚽ Goleador del Mundial</h6>
+      <span class="badge ms-auto" style="background:#dcfce7;color:#166534;font-weight:800;">20 pts si acertás</span>
+    </div>
+    <div class="card-body">
+
+      {% if existing and existing.top_scorer %}
+        <div class="p-3 rounded mb-3 d-flex align-items-center gap-3" style="background:#f8faff;border:1px solid #e2e8f0;">
+          <div>
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;color:#475569;">Tu apuesta actual</div>
+            <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">{{ existing.top_scorer }}</div>
+          </div>
+          {% if existing.top_scorer_points is not none %}
+            {% if existing.top_scorer_points == 20 %}
+              <span class="badge bg-success ms-auto">🏆 +20 pts</span>
+            {% else %}
+              <span class="badge bg-danger ms-auto">❌ 0 pts</span>
+            {% endif %}
+          {% endif %}
+          {% if result and result.top_scorer %}
+            <div class="ms-auto">
+              <small style="color:#475569;font-weight:600;">Goleador real: <strong>{{ result.top_scorer }}</strong></small>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if is_open %}
+        <form method="POST" action="/special">
+          <!-- campo oculto para re-enviar campeón/semis existentes -->
+          <input type="hidden" name="champion" value="{{ existing.champion if existing else '' }}">
+          <input type="hidden" name="semi1" value="{{ existing.semi1 if existing else '' }}">
+          <input type="hidden" name="semi2" value="{{ existing.semi2 if existing else '' }}">
+          <input type="hidden" name="semi3" value="{{ existing.semi3 if existing else '' }}">
+          <input type="hidden" name="semi4" value="{{ existing.semi4 if existing else '' }}">
+
+          <p style="color:#475569;font-weight:600;font-size:.88rem;" class="mb-3">
+            Elegí al jugador que crees que será el máximo goleador del torneo. Top 30 candidatos ordenados por goles en carrera internacional.
+          </p>
+
+          <div class="row g-2 mb-3">
+            {% for player in top_scorers %}
+              <div class="col-md-6 col-lg-4">
+                <label class="d-flex align-items-center gap-2 p-2 rounded"
+                  style="cursor:pointer; border:1px solid {{ '#3949ab' if existing and existing.top_scorer == player.name else '#e2e8f0' }};
+                         background:{{ '#eef2ff' if existing and existing.top_scorer == player.name else '#fff' }};
+                         transition:all .15s;">
+                  <input type="radio" name="top_scorer" value="{{ player.name }}"
+                    {{ 'checked' if existing and existing.top_scorer == player.name }}
+                    style="accent-color:#3949ab; flex-shrink:0;"
+                    onchange="this.closest('form').querySelectorAll('label').forEach(l=>l.style.background='#fff');this.closest('form').querySelectorAll('label').forEach(l=>l.style.borderColor='#e2e8f0');this.closest('label').style.background='#eef2ff';this.closest('label').style.borderColor='#3949ab'">
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-weight:700;font-size:.85rem;color:#1e293b;">{{ player.name }}</div>
+                    <div style="font-size:.72rem;color:#475569;font-weight:600;">{{ player.country }} · {{ player.goals }} goles</div>
+                  </div>
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> Guardar goleador
+          </button>
+          <small class="d-block mt-1" style="color:#475569;font-weight:600;">
+            Guardar también actualiza campeón y semifinalistas si ya los habías seleccionado.
+          </small>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECCIÓN 3: CLASIFICADOS POR GRUPO
   ═══════════════════════════════════════════════════ -->
   <div class="card shadow mb-4">
     <div class="card-header d-flex align-items-center flex-wrap gap-2">

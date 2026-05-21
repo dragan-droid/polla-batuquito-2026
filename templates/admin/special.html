@@ -7,9 +7,9 @@
   <a href="/admin" class="btn btn-outline-secondary btn-sm">← Volver</a>
 </div>
 
-<!-- CAMPEÓN Y SEMIFINALISTAS -->
+<!-- CAMPEÓN, SEMIFINALISTAS Y GOLEADOR -->
 <div class="card shadow mb-4">
-  <div class="card-header"><h6 class="mb-0" style="color:#1e293b;">🏆 Campeón y Semifinalistas</h6></div>
+  <div class="card-header"><h6 class="mb-0" style="color:#1e293b;">🏆 Campeón, Semifinalistas y Goleador</h6></div>
   <div class="card-body">
     <form method="POST" action="/admin/special">
       <div class="row g-3">
@@ -33,6 +33,18 @@
             </select>
           </div>
         {% endfor %}
+        <div class="col-12">
+          <label class="form-label fw-bold" style="color:#1e293b;">⚽ Goleador del Mundial</label>
+          <select class="form-select" name="top_scorer">
+            <option value="">— No definido aún —</option>
+            {% for player in top_scorers %}
+              <option value="{{ player.name }}"
+                {{ 'selected' if result and result.top_scorer == player.name }}>
+                {{ player.name }} ({{ player.country }}, {{ player.goals }} goles)
+              </option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       <button type="submit" class="btn btn-primary mt-3">
         <i class="bi bi-check-circle"></i> Guardar y calcular puntos ({{ bets|length }} apuestas)

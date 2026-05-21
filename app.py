@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from dotenv import load_dotenv
 from models import db, User, Match, Prediction, SpecialBet, SpecialResult, GroupQualifierBet, GroupQualifierResult
 from points import calculate_points, calculate_special_points, calculate_group_qualifier_points
+from top_scorers import TOP_SCORERS
 
 load_dotenv()
 
@@ -323,26 +324,32 @@ def special():
             flash("El campeón debe ser uno de los 4 semifinalistas.", "danger")
             return redirect(url_for("special"))
 
+        top_scorer = request.form.get("top_scorer", "").strip() or None
+
         if existing:
             existing.champion = champion
             existing.semi1, existing.semi2, existing.semi3, existing.semi4 = semis_clean
+            existing.top_scorer = top_scorer
             existing.champion_points = None
             existing.semi_points = None
+            existing.top_scorer_points = None
         else:
             db.session.add(SpecialBet(
                 user_id=user.id,
                 champion=champion,
                 semi1=semis_clean[0], semi2=semis_clean[1],
                 semi3=semis_clean[2], semi4=semis_clean[3],
+                top_scorer=top_scorer,
             ))
         db.session.commit()
 
         # Recalcular si ya hay resultado
         if result and result.champion:
             bet = existing or SpecialBet.query.filter_by(user_id=user.id).first()
-            c_pts, s_pts = calculate_special_points(bet, result)
+            c_pts, s_pts, ts_pts = calculate_special_points(bet, result)
             bet.champion_points = c_pts
             bet.semi_points = s_pts
+            bet.top_scorer_points = ts_pts
             db.session.commit()
 
         flash("✅ Apuesta especial guardada.", "success")
@@ -374,7 +381,8 @@ def special():
         all_bets=all_bets,
         groups_with_teams=groups_with_teams,
         existing_gq=existing_gq,
-        gq_results=gq_results)
+        gq_results=gq_results,
+        top_scorers=TOP_SCORERS)
 
 
 @app.route("/special/groups", methods=["POST"])
@@ -613,19 +621,22 @@ def admin_special():
             result = SpecialResult(id=1)
             db.session.add(result)
 
+        top_scorer_result = request.form.get("top_scorer", "").strip() or None
         result.champion = champion or None
         result.semi1 = semis[0] or None
         result.semi2 = semis[1] or None
         result.semi3 = semis[2] or None
         result.semi4 = semis[3] or None
+        result.top_scorer = top_scorer_result
         db.session.commit()
 
         # Recalcular puntos para todas las apuestas
         if result.champion:
             for bet in bets:
-                c_pts, s_pts = calculate_special_points(bet, result)
+                c_pts, s_pts, ts_pts = calculate_special_points(bet, result)
                 bet.champion_points = c_pts
                 bet.semi_points = s_pts
+                bet.top_scorer_points = ts_pts
             db.session.commit()
             flash(f"✅ Resultados guardados. Puntos calculados para {len(bets)} apuestas.", "success")
         else:
@@ -638,7 +649,8 @@ def admin_special():
 
     return render_template("admin/special.html",
         result=result, teams=teams, bets=bets,
-        groups_with_teams=groups_with_teams, gq_results=gq_results)
+        groups_with_teams=groups_with_teams, gq_results=gq_results,
+        top_scorers=TOP_SCORERS)
 
 
 @app.route("/admin/special/groups", methods=["POST"])

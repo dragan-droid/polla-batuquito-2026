@@ -22,14 +22,15 @@ def calculate_points(pred_s1: int, pred_s2: int, real_s1: int, real_s2: int) -> 
 
 
 def calculate_special_points(bet, result) -> tuple:
-    """Retorna (champion_points, semi_points)."""
+    """Retorna (champion_points, semi_points, top_scorer_points)."""
     champion_pts = 20 if bet.champion and bet.champion == result.champion else 0
     real_semis = result.semis_set
     semi_pts = sum(
         5 for team in [bet.semi1, bet.semi2, bet.semi3, bet.semi4]
         if team and team in real_semis
     )
-    return champion_pts, semi_pts
+    top_scorer_pts = 20 if bet.top_scorer and bet.top_scorer == result.top_scorer else 0
+    return champion_pts, semi_pts, top_scorer_pts
 
 
 def calculate_group_qualifier_points(bet_teams_set, real_teams_set) -> int:
