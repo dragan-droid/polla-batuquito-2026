@@ -1,29 +1,25 @@
 """
 Crea tablas y carga los 104 partidos si la DB está vacía.
-Si RESET_DB=true, borra todo y recarga desde cero.
+Si RESET_DB=true, ELIMINA todas las tablas y las recrea desde cero.
 """
 import os
 from datetime import datetime
 from app import app
-from models import db, Match, Prediction, SpecialBet, SpecialResult, GroupQualifierBet, GroupQualifierResult
+from models import db, Match
 from seed_matches import GRUPOS
 from add_knockout import ELIMINATORIOS
 
 RESET = os.environ.get("RESET_DB", "false").lower() == "true"
 
 with app.app_context():
-    db.create_all()
 
     if RESET:
-        print("⚠️  RESET_DB=true — borrando todos los datos...")
-        GroupQualifierBet.query.delete()
-        GroupQualifierResult.query.delete()
-        SpecialBet.query.delete()
-        SpecialResult.query.delete()
-        Prediction.query.delete()
-        Match.query.delete()
-        db.session.commit()
-        print("✅ Datos eliminados.")
+        print("⚠️  RESET_DB=true — eliminando y recreando todas las tablas...")
+        db.drop_all()
+        print("✅ Tablas eliminadas.")
+
+    db.create_all()
+    print("✅ Tablas creadas/verificadas.")
 
     count = Match.query.count()
     print(f"Partidos en DB: {count}")
@@ -49,4 +45,4 @@ with app.app_context():
         print(f"✅ {total2} partidos eliminatorios cargados.")
         print(f"✅ Total: {total + total2} partidos.")
     else:
-        print(f"ℹ️  DB ya tiene {count} partidos.")
+        print(f"ℹ️  DB ya tiene {count} partidos, no se recarga.")
